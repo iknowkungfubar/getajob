@@ -12,8 +12,11 @@ job-application lifecycle.  Each ``run_once()`` cycle:
 4. Runs the :class:`~agents.context_agent.ContextAgent` on each listing to
    extract structured requirements and compute a profile-match score.
 5. Creates :class:`~core.models.Application` records in ``DISCOVERED`` state.
-6. Emits ``JOB_DISCOVERED`` events so downstream modules (tailoring, browser)
-   can pick up new work.
+6. Emits ``JOB_DISCOVERED`` events so downstream modules can pick up new work.
+7. Runs the :class:`~agents.tailoring_agent.TailoringAgent` on each
+   application to generate a tailored resume and cover letter, then advances
+   the state through ``TAILORED`` to ``PENDING_REVIEW`` — ready for
+   human-in-the-loop approval.
 
 Usage::
 
@@ -35,14 +38,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from agents.base import BaseAgent
 from agents.context_agent import ContextAgent, ContextAnalysis  # used at runtime
 from agents.ingestion_agent import IngestionAgent
+from agents.tailoring_agent import TailoringAgent
 from core.config import load_config
 from core.database import create_engine, get_session
 from core.event_bus import EventPriority, EventType
-from core.exceptions import GetAJobError
+from core.exceptions import GetAJobError, TailoringError
 from core.llm_client import LLMClient, get_llm_client
-from core.models import Application, JobListing, UserProfile
+from core.models import Application, ApplicationEvent, JobListing, UserProfile
 from core.schemas import SearchVectorConfig
-from core.state_machine import ApplicationState
+from core.state_machine import ApplicationState, transition_state
 
 __all__: list[str] = [
     "OrchestratorAgent",
@@ -98,6 +102,7 @@ class OrchestratorAgent(BaseAgent):
         # engine and bus rather than creating their own.
         self._ingestion: IngestionAgent | None = None
         self._context: ContextAgent | None = None
+        self._tailoring: TailoringAgent | None = None
 
         # Resolved during start().
         self._active_profile_id: uuid.UUID | None = None
@@ -108,6 +113,7 @@ class OrchestratorAgent(BaseAgent):
             "jobs_discovered": 0,
             "jobs_analyzed": 0,
             "applications_created": 0,
+            "applications_tailored": 0,
             "errors": 0,
         }
 
@@ -129,8 +135,14 @@ class OrchestratorAgent(BaseAgent):
             llm_client=self._llm,
             event_bus=self._event_bus,
         )
+        self._tailoring = TailoringAgent(
+            engine=self._engine,
+            llm_client=self._llm,
+            event_bus=self._event_bus,
+        )
         await self._ingestion.start()
         await self._context.start()
+        await self._tailoring.start()
 
         self.logger.info(
             "Orchestrator agent initialised",
@@ -141,6 +153,8 @@ class OrchestratorAgent(BaseAgent):
 
     async def stop(self) -> None:
         """Tear down child agents gracefully."""
+        if self._tailoring is not None:
+            await self._tailoring.stop()
         if self._context is not None:
             await self._context.stop()
         if self._ingestion is not None:
@@ -174,6 +188,9 @@ class OrchestratorAgent(BaseAgent):
            extract requirements and compute a match score.
         6. Create an ``Application`` record in ``DISCOVERED`` state.
         7. Emit a ``JOB_DISCOVERED`` event with analysis metadata.
+        8. Advance each application through ``TAILORED`` → ``PENDING_REVIEW``
+           via the :class:`TailoringAgent` (on failure, transition to
+           ``FAILED`` and continue with the next listing).
 
         Returns
         -------
@@ -184,6 +201,7 @@ class OrchestratorAgent(BaseAgent):
             - ``jobs_discovered``  -- new listings found during ingestion.
             - ``jobs_analyzed``    -- listings successfully analysed.
             - ``applications_created`` -- ``Application`` records created.
+            - ``applications_tailored`` -- applications successfully tailored.
             - ``errors``           -- listings that failed during processing.
         """
         self._reset_stats()
@@ -265,6 +283,11 @@ class OrchestratorAgent(BaseAgent):
                     priority=EventPriority.NORMAL,
                 )
 
+                # Advance through TAILORED → PENDING_REVIEW.
+                app_state = await self._advance_application(app, listing, analysis)
+                if app_state == ApplicationState.PENDING_REVIEW:
+                    self._stats["applications_tailored"] += 1
+
             except GetAJobError as exc:
                 self._stats["errors"] += 1
                 self.logger.error(
@@ -285,6 +308,7 @@ class OrchestratorAgent(BaseAgent):
             jobs_discovered=self._stats["jobs_discovered"],
             jobs_analyzed=self._stats["jobs_analyzed"],
             applications_created=self._stats["applications_created"],
+            applications_tailored=self._stats["applications_tailored"],
             errors=self._stats["errors"],
         )
 
@@ -396,6 +420,164 @@ class OrchestratorAgent(BaseAgent):
         )
 
         return app
+
+    # ── Application advancement ──────────────────────────────────────────────
+
+    async def _advance_application(
+        self,
+        app: Application,
+        listing: JobListing,
+        analysis: ContextAnalysis,
+    ) -> ApplicationState:
+        """Advance an application through TAILORED → PENDING_REVIEW.
+
+        Calls the :class:`TailoringAgent` to generate a tailored resume and
+        cover letter, persists the results on the ``Application`` record, and
+        steps the state machine forward.  Audit ``ApplicationEvent`` entries
+        are recorded for each transition.
+
+        On ``TailoringError`` the application is moved to ``FAILED`` and the
+        error is logged — the calling loop continues with the next listing.
+
+        Args:
+            app: The ``Application`` record (expected to be in ``DISCOVERED``
+                state).  The object may be detached — it is re-fetched inside
+                a fresh session for the updates.
+            listing: The associated ``JobListing`` (used for description text).
+            analysis: The ``ContextAnalysis`` from the context agent.
+
+        Returns:
+            ``PENDING_REVIEW`` on success, ``FAILED`` on error.
+        """
+        job_description = self._extract_description_text(listing)
+
+        if not job_description:
+            self.logger.warning(
+                "Empty job description — cannot tailor",
+                application_id=str(app.id),
+                job_id=str(listing.id),
+            )
+            async with get_session(self._engine) as session:
+                db_app = await session.get(Application, app.id)
+                if db_app is not None:
+                    target = transition_state(
+                        db_app.state,
+                        ApplicationState.FAILED,
+                        application_id=str(app.id),
+                        metadata={"reason": "Empty job description"},
+                    )
+                    prev_state = db_app.state
+                    db_app.state = target
+                    session.add(
+                        ApplicationEvent(
+                            application_id=db_app.id,
+                            from_state=prev_state,
+                            to_state=target,
+                            metadata_json={"reason": "Empty job description", "stage": "tailoring"},
+                        )
+                    )
+            return ApplicationState.FAILED
+
+        try:
+            tailoring_result = await self._tailoring.tailor(
+                job_listing_id=str(listing.id),
+                profile_id=(
+                    str(self._active_profile_id) if self._active_profile_id else None
+                ),
+                job_title=listing.title or "",
+                company=listing.company or "",
+                job_description=job_description,
+                generate_cover_letter=True,
+            )
+        except TailoringError as exc:
+            self.logger.error(
+                "Tailoring failed for application",
+                application_id=str(app.id),
+                job_id=str(listing.id),
+                error=str(exc),
+            )
+            async with get_session(self._engine) as session:
+                db_app = await session.get(Application, app.id)
+                if db_app is None:
+                    return ApplicationState.FAILED
+
+                target = transition_state(
+                    db_app.state,
+                    ApplicationState.FAILED,
+                    application_id=str(app.id),
+                    metadata={"error": str(exc)},
+                )
+                prev_state = db_app.state
+                db_app.state = target
+                session.add(
+                    ApplicationEvent(
+                        application_id=db_app.id,
+                        from_state=prev_state,
+                        to_state=target,
+                        metadata_json={"error": str(exc), "stage": "tailoring"},
+                    )
+                )
+            return ApplicationState.FAILED
+
+        # ── Success path ─────────────────────────────────────────────────
+        async with get_session(self._engine) as session:
+            db_app = await session.get(Application, app.id)
+            if db_app is None:
+                self.logger.warning(
+                    "Application vanished before advancement",
+                    application_id=str(app.id),
+                )
+                return ApplicationState.FAILED
+
+            # Persist generated content.
+            db_app.resume_text = tailoring_result.resume_text
+            db_app.cover_letter = tailoring_result.cover_letter
+
+            # DISCOVERED → TAILORED
+            from_state = db_app.state
+            transition_state(
+                from_state,
+                ApplicationState.TAILORED,
+                application_id=str(app.id),
+            )
+            db_app.state = ApplicationState.TAILORED
+            session.add(
+                ApplicationEvent(
+                    application_id=db_app.id,
+                    from_state=from_state,
+                    to_state=ApplicationState.TAILORED,
+                    metadata_json={
+                        "matched_skills": tailoring_result.matched_skills,
+                        "warnings": tailoring_result.warnings,
+                    },
+                )
+            )
+
+            # TAILORED → PENDING_REVIEW
+            transition_state(
+                db_app.state,
+                ApplicationState.PENDING_REVIEW,
+                application_id=str(app.id),
+            )
+            prev_state = db_app.state
+            db_app.state = ApplicationState.PENDING_REVIEW
+            session.add(
+                ApplicationEvent(
+                    application_id=db_app.id,
+                    from_state=prev_state,
+                    to_state=ApplicationState.PENDING_REVIEW,
+                )
+            )
+
+            self.logger.info(
+                "Application advanced to PENDING_REVIEW",
+                application_id=str(db_app.id),
+                job_id=str(listing.id),
+                resume_length=len(tailoring_result.resume_text or ""),
+                matched_skills=len(tailoring_result.matched_skills),
+            )
+
+        return ApplicationState.PENDING_REVIEW
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 

@@ -52,7 +52,7 @@ from agents.orchestrator_agent import OrchestratorAgent
 from core.database import Base
 from core.event_bus import EventPriority, InMemoryEventBus
 from core.llm_client import MockLLMClient
-from core.models import Application, JobListing, UserProfile, WorkExperience
+from core.models import Application, ApplicationEvent, JobListing, UserProfile, WorkExperience
 from core.state_machine import ApplicationState
 
 __all__: list[str] = []
@@ -359,7 +359,12 @@ class TestFullPipeline:
                 f"Expected 0 errors, got {result['errors']}"
             )
 
-            # ── Step 5: Assert database records ──────────────────────────
+            # ── Step 5: Assert result counters include tailoring ──────────
+            assert result["applications_tailored"] == 1, (
+                f"Expected 1 application tailored, got {result['applications_tailored']}"
+            )
+
+            # ── Step 6: Assert database records ──────────────────────────
             from sqlalchemy import select
 
             from core.database import get_session
@@ -371,16 +376,64 @@ class TestFullPipeline:
                 app = (await session.execute(app_query)).scalar_one_or_none()
 
                 assert app is not None, "Application record was not created"
-                assert app.state == ApplicationState.DISCOVERED, (
-                    f"Expected application in DISCOVERED, got {app.state.value}"
+                assert app.state == ApplicationState.PENDING_REVIEW, (
+                    f"Expected application in PENDING_REVIEW, got {app.state.value}"
                 )
-                # Orchestrator currently creates records in DISCOVERED state
-                # without populating resume/cover letter or audit events.
-                # Those are populated by downstream Tailoring/Browser phases.
-                assert app.resume_text is None, "Resume should be None before tailoring"
-                assert app.cover_letter is None, "Cover letter should be None before tailoring"
+                assert app.resume_text is not None, (
+                    "Resume should be populated after tailoring"
+                )
+                # The mock resume text has a trailing newline from the
+                # triple-quoted string; the TailoringAgent strips whitespace
+                # from LLM output via .strip().
+                assert app.resume_text == _MOCK_RESUME_TEXT.strip(), (
+                    "Resume should match the mock-generated text (stripped)"
+                )
+                assert app.cover_letter is not None, (
+                    "Cover letter should be populated after tailoring"
+                )
+                # The TailoringAgent's _clean_cover_letter strips trailing
+                # signature boilerplate (e.g. "Best,\\nName"), so the stored
+                # text may differ from the raw mock.  Check key content
+                # rather than exact match.
+                assert "Acme Team" in app.cover_letter, (
+                    "Cover letter should reference the company"
+                )
+                assert "Your Needs" not in app.cover_letter, (
+                    "Cover letter should avoid cliché placeholders"
+                )
+                assert "Staff Engineer" in app.cover_letter, (
+                    "Cover letter should reference the role"
+                )
 
-            # ── Step 6: Assert event emissions ────────────────────────────
+                # ── Step 7: Assert ApplicationEvent audit trail ───────────
+                events_query = (
+                    select(ApplicationEvent)
+                    .where(ApplicationEvent.application_id == app.id)
+                    .order_by(ApplicationEvent.timestamp)
+                )
+                events = (await session.execute(events_query)).scalars().all()
+
+                assert len(events) >= 2, (
+                    f"Expected at least 2 transition events, got {len(events)}"
+                )
+
+                # Event 1: DISCOVERED → TAILORED
+                assert events[0].from_state == ApplicationState.DISCOVERED, (
+                    f"Expected first event from DISCOVERED, got {events[0].from_state}"
+                )
+                assert events[0].to_state == ApplicationState.TAILORED, (
+                    f"Expected first event to TAILORED, got {events[0].to_state}"
+                )
+
+                # Event 2: TAILORED → PENDING_REVIEW
+                assert events[1].from_state == ApplicationState.TAILORED, (
+                    f"Expected second event from TAILORED, got {events[1].from_state}"
+                )
+                assert events[1].to_state == ApplicationState.PENDING_REVIEW, (
+                    f"Expected second event to PENDING_REVIEW, got {events[1].to_state}"
+                )
+
+            # ── Step 8: Assert event emissions ────────────────────────────
             event_types = [e["type"] for e in recording_bus.published_events]
             assert "job.discovered" in event_types, (
                 f"Missing 'job.discovered' event. Got: {event_types}"
