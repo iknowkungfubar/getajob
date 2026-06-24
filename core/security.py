@@ -22,6 +22,7 @@ import secrets
 from typing import Protocol
 
 import structlog
+from cryptography.exceptions import InvalidTag, UnsupportedAlgorithm
 
 from core.exceptions import SecurityError
 
@@ -84,7 +85,7 @@ def encrypt_value(plaintext: str, key: bytes) -> str:
         ciphertext = aesgcm.encrypt(nonce, data, None)  # (nonce || ct || tag)
         payload = nonce + ciphertext
         return base64.urlsafe_b64encode(payload).decode(_ENCODING).rstrip("=")
-    except Exception as exc:
+    except (InvalidTag, UnsupportedAlgorithm, AttributeError, ValueError, TypeError) as exc:
         msg = "Encryption failed"
         raise SecurityError(msg, details={"error": str(exc)}) from exc
 

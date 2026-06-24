@@ -229,13 +229,10 @@ class IngestionAgent(BaseAgent):
                         source=source,
                         roles=vector.roles[:3],
                     )
-                    print(
-                        f"\n  ⚠  Browser-based discovery not yet available for '{source}'. "
-                        f"To enable job discovery from {source}, configure the Browser "
-                        f"Execution Engine (Module 4) with a {source} profile in "
-                        f"browser_engine/ats_profiles/. Add your {source} search "
-                        f"credentials and session configuration to "
-                        f"config/settings.yaml under job_discovery.browser_sources."
+                    self.logger.info(
+                        "Browser-based discovery not yet available — stub",
+                        source=source,
+                        module="browser_engine.ats_profiles",
                     )
                     continue
 
@@ -706,7 +703,7 @@ class IngestionAgent(BaseAgent):
         """Return a list of notable companies using Lever for ATS."""
         return [
             "asana", "atlassian", "box", "brex", "coinbase",
-            "confluent", "databricks", "deel", "deel", "doordash",
+            "confluent", "databricks", "deel", "doordash",
             "doximity", "dbt-labs", "figma", "fivetran", "gong",
             "grafana", "intercom", "looker", "mux", "netlify",
             "okta", "opensea", "ora", "pagerduty", "ramp",

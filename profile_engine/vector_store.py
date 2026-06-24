@@ -100,7 +100,6 @@ class VectorStore:
         """Tear down the ChromaDB client."""
         self._started = False
         if self._client is not None:
-            self._client.clear_system_cache()
             self._client = None
         logger.info("ChromaDB vector store stopped")
 

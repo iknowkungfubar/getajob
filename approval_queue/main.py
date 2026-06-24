@@ -11,6 +11,7 @@ with a reverse proxy (nginx / Caddy) for TLS and optional basic auth.
 
 from __future__ import annotations as _annotations
 
+import os
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -233,7 +234,7 @@ async def login(request: Request) -> Response:
 
     # Production: check against configured password.
     # Priority: dedicated env var > database password > fail closed.
-    expected = settings.database.password or ""
+    expected = os.environ.get("GETAJOB_APPROVAL_PASSWORD") or settings.database.password or ""
 
     if password == expected:
         token = getattr(request.app.state, "session_token", None)

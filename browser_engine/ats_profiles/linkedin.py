@@ -274,7 +274,8 @@ class LinkedInFormHandler:
                     if profile.linkedin_url:
                         await human.human_type(page, inp, profile.linkedin_url)
                         result.fields_filled.append("linkedin")
-            except Exception:
+            except Exception as exc:
+                logger.debug("Field interaction failed", field="text_input", error=str(exc))
                 continue
 
         # 5. Dropdowns.
@@ -288,7 +289,8 @@ class LinkedInFormHandler:
                     if profile.work_authorization:
                         await dd.select_option(label=profile.work_authorization)
                         result.fields_filled.append("work_authorization")
-            except Exception:
+            except Exception as exc:
+                logger.debug("Field interaction failed", field="dropdown", error=str(exc))
                 continue
 
         # 6. Radio groups (Yes/No questions).
@@ -305,7 +307,8 @@ class LinkedInFormHandler:
                         )
                         if no_radio:
                             await human.click_element(page, no_radio)
-            except Exception:
+            except Exception as exc:
+                logger.debug("Field interaction failed", field="radio_group", error=str(exc))
                 continue
 
     async def _find_label_text(self, page: Page, element: Any) -> str:

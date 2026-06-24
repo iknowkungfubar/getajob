@@ -294,13 +294,19 @@ async def review_application(
     except Exception as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    # Persist the application state update.
+    # Persist the application state update with optimistic locking.
     stmt = (
         update(Application)
         .where(Application.id == app_uuid)
+        .where(Application.state == app.state)
         .values(state=target, notes=reason)
     )
-    await db.execute(stmt)
+    result = await db.execute(stmt)
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Application state changed concurrently — reload and try again",
+        )
 
     # Create an audit-log event.
     event_entry = ApplicationEvent(
@@ -775,7 +781,7 @@ def _mock_application_detail(application_id: str) -> dict[str, Any]:
             "posted_date": (datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=7)).isoformat(),
         },
         "recruiter_name": "Jane Smith",
-        "recruiter_email": "jane.smith@acme.corp",
+        "recruiter_email": "jane.smith@acme.example",
         "events": [
             {
                 "id": str(uuid.uuid4()),

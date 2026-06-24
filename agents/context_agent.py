@@ -158,19 +158,19 @@ class ContextAgent(BaseAgent):
         self._llm: LLMClient = llm_client or get_llm_client()
 
         # Lazy-loaded profile store (needs engine).
-        self._profile_store: Any = None
+        self._profile_store_val: Any = None
 
     @property
     def _profile_store(self) -> Any:
         """Lazily initialised :class:`~profile_engine.profile_store.ProfileStore`."""
-        if self.__profile_store is None:
+        if self._profile_store_val is None:
             from profile_engine.profile_store import ProfileStore  # noqa: PLC0415
-            self.__profile_store = ProfileStore(self._engine)
-        return self.__profile_store
+            self._profile_store_val = ProfileStore(self._engine)
+        return self._profile_store_val
 
     @_profile_store.setter
     def _profile_store(self, value: Any) -> None:
-        self.__profile_store = value
+        self._profile_store_val = value
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 

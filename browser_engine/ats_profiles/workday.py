@@ -414,7 +414,8 @@ class WorkdayFormHandler:
                     if el is not None and await el.is_visible():
                         await human.human_type(page, el, value)
                         break
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Field interaction failed", field=label, error=str(exc))
                     continue
 
     async def _emit_on(self, result: FormFillingResult, step: str, idx: int, total: int) -> None:

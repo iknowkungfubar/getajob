@@ -12,7 +12,7 @@ import uuid
 from collections.abc import Sequence
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.state_machine import ApplicationState
 
@@ -188,6 +188,14 @@ class ProfileUpdate(BaseModel):
     skills: list[SkillSchema] | None = None
     work_experiences: list[WorkExperienceSchema] | None = None
     answers: dict[str, str] | None = None
+
+    @field_validator("email", "phone")
+    @classmethod
+    def _not_empty(cls, v: str | None) -> str | None:
+        """Reject empty-string PII values that would silently erase data."""
+        if v is not None and not v.strip():
+            raise ValueError("PII field cannot be empty string")
+        return v
 
 
 class ProfileRead(BaseModel):

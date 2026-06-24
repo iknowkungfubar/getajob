@@ -104,10 +104,9 @@ class GreenhouseFormHandler:
                 el = await page.query_selector(f'[{attr_name}="greenhouse"]')
                 if el is not None:
                     return True
-            except Exception:
+            except Exception as exc:
+                logger.debug("Field interaction failed", field=attr_name, error=str(exc))
                 continue
-
-        return False
 
     async def handle(  # type: ignore[override]
         self,
@@ -268,7 +267,8 @@ class GreenhouseFormHandler:
                     if next_btn:
                         await human.click_element(page, next_btn)
                         await human.sleep_between_actions()
-            except Exception:
+            except Exception as exc:
+                logger.debug("Field interaction failed", field=field_name, error=str(exc))
                 continue
 
     async def _emit(self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int) -> None:

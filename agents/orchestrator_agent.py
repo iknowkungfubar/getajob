@@ -203,7 +203,7 @@ class OrchestratorAgent(BaseAgent):
         self.logger.debug("Search vectors loaded", count=len(vectors))
 
         # ── Step 3: Ingestion ─────────────────────────────────────────────────
-        ingestion = await self._get_ingestion_agent()
+        ingestion = self._ingestion
         try:
             ingestion_result = await ingestion.run()
             self._stats["jobs_discovered"] = ingestion_result.get("new_listings", 0)
@@ -220,7 +220,7 @@ class OrchestratorAgent(BaseAgent):
         self.logger.debug("Unprocessed listings fetched", count=len(listings))
 
         # ── Steps 5-7: Analyse, create application, emit event ────────────────
-        context = await self._get_context_agent()
+        context = self._context
 
         for listing in listings:
             try:
@@ -289,34 +289,6 @@ class OrchestratorAgent(BaseAgent):
         )
 
         return dict(self._stats)
-
-    # ── Child-agent factories (lazy, shared lifecycle) ────────────────────────
-
-    async def _get_ingestion_agent(self) -> IngestionAgent:
-        """Return the shared :class:`IngestionAgent`, initialising on first call.
-
-        The child agent uses the orchestrator's engine and event bus so that
-        events published by the ingestion agent flow through the same bus
-        instance.
-        """
-        if self._ingestion is None:
-            self._ingestion = IngestionAgent(
-                engine=self._engine,
-                event_bus=self._event_bus,
-            )
-            await self._ingestion.start()
-        return self._ingestion
-
-    async def _get_context_agent(self) -> ContextAgent:
-        """Return the shared :class:`ContextAgent`, initialising on first call."""
-        if self._context is None:
-            self._context = ContextAgent(
-                engine=self._engine,
-                llm_client=self._llm,
-                event_bus=self._event_bus,
-            )
-            await self._context.start()
-        return self._context
 
     # ── Profile resolution ────────────────────────────────────────────────────
 

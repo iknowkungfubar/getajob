@@ -244,7 +244,8 @@ class IndeedFormHandler:
                 elif ("location" in combined or "city" in combined) and profile.location:
                     await human.human_type(page, inp, profile.location)
                     result.fields_filled.append("location")
-            except Exception:
+            except Exception as exc:
+                logger.debug("Field interaction failed", field="text_input", error=str(exc))
                 continue
 
     async def _fill_additional_questions(
@@ -276,7 +277,8 @@ class IndeedFormHandler:
                     if options:
                         await dd.select_option(index=len(options) - 3)
                         result.fields_filled.append("experience")
-            except Exception:
+            except Exception as exc:
+                logger.debug("Field interaction failed", field="dropdown", error=str(exc))
                 continue
 
         # Note: Indeed custom questions vary widely by employer.
