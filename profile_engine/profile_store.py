@@ -10,6 +10,7 @@ from __future__ import annotations as _annotations
 
 import datetime
 import json
+import os
 import uuid
 from collections.abc import Sequence
 from pathlib import Path
@@ -70,8 +71,15 @@ class ProfileStore:
             raise ProfileError(msg)
 
         if not raw_salt:
-            # Default to a zero salt when none is configured (still encrypts).
-            raw_salt = "00" * 16
+            # Generate a random 16-byte salt when none is configured.
+            # A static salt (previously all-zero) would enable rainbow-table
+            # precomputation attacks against the PBKDF2 key derivation.
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "No encryption_salt configured — generated a random salt. "
+                "Set GETAJOB_SECURITY__ENCRYPTION_SALT in .env for a deterministic salt."
+            )
+            raw_salt = os.urandom(16).hex()
 
         key, _ = derive_key(raw_key, bytes.fromhex(raw_salt))
         self._encryption_key = key
@@ -357,6 +365,113 @@ class ProfileStore:
         profile = await self.create_profile(data)
         logger.info("Profile imported from file", profile_id=str(profile.id), path=str(file_path))
         return profile
+
+    # ── Profile-with-skills loader (unified for agents) ───────────────────────────
+
+    async def load_profile_with_skills(
+        self,
+        profile_id: uuid.UUID | str | None = None,
+        session: AsyncSession | None = None,
+    ) -> dict[str, Any]:
+        """Load the user's profile, skills, and work history in a unified dict.
+
+        Consolidates duplicated profile-loading logic that previously lived in
+        :class:`~agents.context_agent.ContextAgent` and
+        :class:`~agents.tailoring_agent.TailoringAgent`.
+
+        Returns:
+            A dict with keys:
+            - ``name`` / ``summary`` — profile metadata.
+            - ``skill_names`` — flat list of lowercased skill names.
+            - ``skills_by_category`` — dict mapping category -> list[skill].
+            - ``work_experiences`` — list of experience dicts.
+            - ``experience_years`` — total years computed from date ranges.
+        """
+        from core.database import get_session  # noqa: PLC0415
+        from sqlalchemy import select  # noqa: PLC0415
+
+        result: dict[str, Any] = {
+            "name": "",
+            "skill_names": [],
+            "skills_by_category": {},
+            "work_experiences": [],
+            "experience_years": 0.0,
+            "summary": "",
+        }
+
+        async def _do(s: AsyncSession) -> dict[str, Any]:
+            pid: uuid.UUID | None = (
+                uuid.UUID(str(profile_id)) if profile_id is not None else None
+            )
+
+            if pid is not None:
+                query = select(UserProfile).where(
+                    UserProfile.id == pid,
+                    UserProfile.is_active.is_(True),
+                )
+            else:
+                query = (
+                    select(UserProfile)
+                    .where(UserProfile.is_active.is_(True))
+                    .order_by(UserProfile.updated_at.desc())
+                    .limit(1)
+                )
+
+            profile_row = (await s.execute(query)).scalar_one_or_none()
+            if profile_row is None:
+                return result
+
+            result["name"] = profile_row.name or ""
+            result["summary"] = getattr(profile_row, "summary", "") or ""
+
+            # Parse skills JSON.
+            if profile_row.skills:
+                for skill in profile_row.skills:
+                    name = skill.get("name", "")
+                    category = skill.get("category", "general")
+                    result["skill_names"].append(name.lower())
+                    result["skills_by_category"].setdefault(category, []).append(name.lower())
+
+            # Load work experiences.
+            exp_query = select(WorkExperience).where(
+                WorkExperience.profile_id == profile_row.id,
+            ).order_by(WorkExperience.start_date.desc())
+
+            exps = (await s.execute(exp_query)).scalars().all()
+            for exp_row in exps:
+                entry = {
+                    "company": exp_row.company,
+                    "title": exp_row.title,
+                    "description": exp_row.description or "",
+                    "skills_used": exp_row.skills_used or [],
+                    "start_date": exp_row.start_date,
+                    "end_date": exp_row.end_date,
+                    "is_current": exp_row.is_current,
+                }
+                result["work_experiences"].append(entry)
+
+                if exp_row.start_date:
+                    end = exp_row.end_date or datetime.datetime.now(datetime.UTC)
+                    start = exp_row.start_date
+                    end = end.date() if isinstance(end, datetime.datetime) else end
+                    start = start.date() if isinstance(start, datetime.datetime) else start
+                    delta = (end - start).days / 365.25
+                    result["experience_years"] += max(0.0, delta)
+
+            # Merge skills from experience entries.
+            for exp in exps:
+                if exp.skills_used:
+                    for s in exp.skills_used:
+                        sl = s.lower()
+                        if sl not in result["skill_names"]:
+                            result["skill_names"].append(sl)
+
+            return result
+
+        if session is not None:
+            return await _do(session)
+        async with get_session(self._engine) as s:
+            return await _do(s)
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 

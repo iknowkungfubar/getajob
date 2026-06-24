@@ -434,7 +434,7 @@ class OrchestratorAgent(BaseAgent):
         Returns:
             The description text, or an empty string if unavailable.
         """
-        if listing.description_json:
+        if listing.description_json and isinstance(listing.description_json, dict):
             return listing.description_json.get("raw", "") or ""
         return ""
 

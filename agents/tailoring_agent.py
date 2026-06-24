@@ -97,6 +97,21 @@ class TailoringAgent(BaseAgent):
         self._engine: AsyncEngine = engine or create_engine()
         self._llm: LLMClient = llm_client or get_llm_client()
 
+        # Lazy-initialised profile store.
+        self._profile_store: Any = None
+
+    @property
+    def _profile_store(self) -> Any:
+        """Lazily initialised :class:`~profile_engine.profile_store.ProfileStore`."""
+        if self.__profile_store is None:
+            from profile_engine.profile_store import ProfileStore  # noqa: PLC0415
+            self.__profile_store = ProfileStore(self._engine)
+        return self.__profile_store
+
+    @_profile_store.setter
+    def _profile_store(self, value: Any) -> None:
+        self.__profile_store = value
+
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
     async def start(self) -> None:
@@ -225,93 +240,21 @@ class TailoringAgent(BaseAgent):
     async def _load_profile_data(self, profile_id: str | None = None) -> dict[str, Any]:
         """Load the user's profile from the database.
 
+        Delegates to :meth:`ProfileStore.load_profile_with_skills` to avoid
+        duplicating the profile-loading logic (shared with ContextAgent).
+
         Returns:
             A dict with keys: ``skill_names``, ``skills_by_category``,
             ``work_experiences``, ``experience_years``, ``name``, ``summary``.
         """
-        from core.models import UserProfile, WorkExperience  # noqa: PLC0415
-        from sqlalchemy import select  # noqa: PLC0415
+        result = await self._profile_store.load_profile_with_skills(profile_id)
 
-        result: dict[str, Any] = {
-            "name": "",
-            "skill_names": [],
-            "skills_by_category": {},
-            "work_experiences": [],
-            "experience_years": 0.0,
-            "summary": "",
-        }
-
-        async with get_session(self._engine) as session:
-            if profile_id:
-                query = select(UserProfile).where(
-                    UserProfile.id == uuid.UUID(profile_id),
-                    UserProfile.is_active.is_(True),
-                )
-            else:
-                query = (
-                    select(UserProfile)
-                    .where(UserProfile.is_active.is_(True))
-                    .order_by(UserProfile.updated_at.desc())
-                    .limit(1)
-                )
-
-            profile_row = (await session.execute(query)).scalar_one_or_none()
-            if profile_row is None:
-                self.logger.info("No active profile found — returning empty profile data")
-                return result
-
-            result["name"] = profile_row.name
-
-            # Parse skills JSON.
-            if profile_row.skills:
-                for skill in profile_row.skills:
-                    name = skill.get("name", "")
-                    category = skill.get("category", "general")
-                    result["skill_names"].append(name.lower())
-                    result["skills_by_category"].setdefault(category, []).append(name.lower())
-
-            # Load work experiences.
-            exp_query = select(WorkExperience).where(
-                WorkExperience.profile_id == profile_row.id,
-            ).order_by(WorkExperience.start_date.desc())
-
-            exps = (await session.execute(exp_query)).scalars().all()
-            for exp_row in exps:
-                entry = {
-                    "company": exp_row.company,
-                    "title": exp_row.title,
-                    "description": exp_row.description or "",
-                    "skills_used": exp_row.skills_used or [],
-                    "start_date": exp_row.start_date,
-                    "end_date": exp_row.end_date,
-                    "is_current": exp_row.is_current,
-                }
-                result["work_experiences"].append(entry)
-
-                if exp_row.start_date:
-                    end = exp_row.end_date or datetime.datetime.now(datetime.UTC)
-                    start = exp_row.start_date
-                    # Normalize to date objects for safe subtraction
-                    end = end.date() if isinstance(end, datetime.datetime) else end
-                    start = start.date() if isinstance(start, datetime.datetime) else start
-                    delta = (end - start).days / 365.25
-                    result["experience_years"] += max(0.0, delta)
-
-            # Merge skills from experience entries.
-            for exp in exps:
-                if exp.skills_used:
-                    for s in exp.skills_used:
-                        sl = s.lower()
-                        if sl not in result["skill_names"]:
-                            result["skill_names"].append(sl)
-
-            self.logger.debug(
-                "Loaded profile data for tailoring",
-                name=profile_row.name,
-                skills=len(result["skill_names"]),
-                experiences=len(result["work_experiences"]),
-            )
-
+        self.logger.debug(
+            "Loaded profile data for tailoring",
+            name=result.get("name", "unknown"),
+            skills=len(result.get("skill_names", [])),
+            experiences=len(result.get("work_experiences", [])),
+        )
         return result
 
     def _format_profile_context(self, profile_data: dict[str, Any]) -> str:

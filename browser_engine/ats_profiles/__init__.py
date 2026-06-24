@@ -41,6 +41,7 @@ class ATSProfile(str, enum.Enum):
     BAMBOO = "bamboo"
     SMART_RECRUITERS = "smart_recruiters"
     GENERIC = "generic"
+    UNKNOWN = "unknown"
 
     def __str__(self) -> str:
         return self.value
@@ -165,3 +166,19 @@ PROFILE_HANDLER_REGISTRY: dict[ATSProfile, type] = {}
 def get_handler_for_profile(profile: ATSProfile) -> type | None:
     """Return the registered handler class for *profile*, or ``None``."""
     return PROFILE_HANDLER_REGISTRY.get(profile)
+
+
+# ── Handler module imports (side-effect registration) ────────────────────────
+
+# Each handler module registers its class in PROFILE_HANDLER_REGISTRY via
+# module-level code.  We import them here (after the registry is defined) so
+# those side effects actually execute — otherwise PROFILE_HANDLER_REGISTRY
+# stays empty except for GenericFormHandler.
+from browser_engine.ats_profiles import (  # noqa: E402  # isort: skip
+    generic,
+    greenhouse,
+    indeed,
+    lever,
+    linkedin,
+    workday,
+)

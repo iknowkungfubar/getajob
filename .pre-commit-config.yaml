@@ -1,0 +1,98 @@
+# GetAJob — Pre-Commit Hook Configuration
+#
+# Install: pre-commit install
+# Run all hooks: pre-commit run --all-files
+# Update hooks: pre-commit autoupdate
+
+ci:
+  autofix_prs: true
+  autoupdate_schedule: weekly
+  skip: [mypy] # mypy is slow for CI auto-fix; runs separately in GitHub Actions
+
+repos:
+  # ── Ruff (linter + formatter) ──────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      # Lint: auto-fixable rules applied first
+      - id: ruff
+        name: ruff lint
+        args:
+          - --fix
+          - --exit-non-zero-on-fix
+      # Format: idempotent formatting (Black-compatible)
+      - id: ruff-format
+        name: ruff format
+
+  # ── Type Checking ──────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        name: mypy type check
+        language: system # Use the project's mypy, not the mirror's
+        args: ["--strict"]
+        additional_dependencies: []
+        # mypy is slow; only run on staged files, not the full project
+        pass_filenames: true
+        # Exclude test and alembic files from pre-commit (still run in CI)
+        exclude: ^(tests/|alembic/)
+
+  # ── General Purpose Hooks ──────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Trim trailing whitespace
+      - id: trailing-whitespace
+        name: trim trailing whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      # Ensure files end with a newline
+      - id: end-of-file-fixer
+        name: ensure files end with newline
+
+      # Validate YAML files
+      - id: check-yaml
+        name: check YAML syntax
+        args: [--unsafe]
+
+      # Don't commit massive files (>500KB)
+      - id: check-added-large-files
+        name: check for large files
+        args: [--maxkb=500]
+
+      # Prevent accidental merge conflict markers
+      - id: check-merge-conflict
+        name: check for merge conflict markers
+
+      # Prevent debugger/breakpoint imports
+      - id: debug-statements
+        name: check for debug imports (pdb/ipdb)
+
+      # Check for case conflicts in filenames
+      - id: check-case-conflict
+        name: check for filename case conflicts
+
+      # Check for JSON syntax errors
+      - id: check-json
+        name: check JSON syntax
+
+      # Check for symlinks that point nowhere
+      - id: check-symlinks
+        name: check for broken symlinks
+
+      # Detect private key files
+      - id: detect-private-key
+        name: detect private key files
+
+  # ── Secrets Scanning ───────────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: detect secrets in code
+        args:
+          - --baseline
+          - .secrets.baseline
+        # Exclude test fixtures that intentionally use fake secrets
+        exclude: ^tests/fixtures/|^env\.template$|\.secrets\.baseline$

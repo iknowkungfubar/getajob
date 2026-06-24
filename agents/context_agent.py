@@ -15,7 +15,8 @@ Key behaviours:
 
 from __future__ import annotations as _annotations
 
-import uuid
+import datetime
+import statistics
 from typing import Any
 
 import structlog
@@ -158,6 +159,18 @@ class ContextAgent(BaseAgent):
 
         # Lazy-loaded profile store (needs engine).
         self._profile_store: Any = None
+
+    @property
+    def _profile_store(self) -> Any:
+        """Lazily initialised :class:`~profile_engine.profile_store.ProfileStore`."""
+        if self.__profile_store is None:
+            from profile_engine.profile_store import ProfileStore  # noqa: PLC0415
+            self.__profile_store = ProfileStore(self._engine)
+        return self.__profile_store
+
+    @_profile_store.setter
+    def _profile_store(self, value: Any) -> None:
+        self.__profile_store = value
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -312,87 +325,21 @@ class ContextAgent(BaseAgent):
     async def _load_profile_skills(self, profile_id: str | None = None) -> dict[str, Any]:
         """Load the user's skills and work history from the profile store.
 
+        Delegates to :meth:`ProfileStore.load_profile_with_skills` to avoid
+        duplicating the profile-loading logic (shared with TailoringAgent).
+
         Returns:
             A dict with keys: ``skill_names`` (flat list), ``skills_by_category``
             (dict), ``work_experiences`` (list), ``experience_years`` (float).
         """
-        from core.models import UserProfile, WorkExperience  # noqa: PLC0415
-        from sqlalchemy import select  # noqa: PLC0415
+        result = await self._profile_store.load_profile_with_skills(profile_id)
 
-        result: dict[str, Any] = {
-            "skill_names": [],
-            "skills_by_category": {},
-            "work_experiences": [],
-            "experience_years": 0.0,
-        }
-
-        async with get_session(self._engine) as session:  # type: ignore[used-before-def]
-            if profile_id:
-                query = select(UserProfile).where(
-                    UserProfile.id == uuid.UUID(profile_id),
-                    UserProfile.is_active.is_(True),
-                )
-            else:
-                # Load the most recently updated active profile.
-                query = (
-                    select(UserProfile)
-                    .where(UserProfile.is_active.is_(True))
-                    .order_by(UserProfile.updated_at.desc())
-                    .limit(1)
-                )
-
-            profile_row = (await session.execute(query)).scalar_one_or_none()
-            if profile_row is None:
-                self.logger.info("No active profile found — returning empty skill set")
-                return result
-
-            # Parse skills JSON.
-            if profile_row.skills:
-                for skill in profile_row.skills:
-                    name = skill.get("name", "")
-                    category = skill.get("category", "general")
-                    result["skill_names"].append(name.lower())
-                    result["skills_by_category"].setdefault(category, []).append(name.lower())
-
-            # Load work experiences.
-            exp_query = select(WorkExperience).where(
-                WorkExperience.profile_id == profile_row.id
-            ).order_by(WorkExperience.start_date.desc())
-
-            exps = (await session.execute(exp_query)).scalars().all()
-            for exp_row in exps:
-                entry = {
-                    "company": exp_row.company,
-                    "title": exp_row.title,
-                    "description": exp_row.description or "",
-                    "skills_used": exp_row.skills_used or [],
-                }
-                result["work_experiences"].append(entry)
-                # Accumulate experience years.
-                if exp_row.start_date:
-                    end = exp_row.end_date or datetime.datetime.now(datetime.UTC)
-                    start = exp_row.start_date
-                    # Normalize to date objects for safe subtraction
-                    end = end.date() if isinstance(end, datetime.datetime) else end
-                    start = start.date() if isinstance(start, datetime.datetime) else start
-                    delta = (end - start).days / 365.25
-                    result["experience_years"] += max(0.0, delta)
-
-            # Also add skills from work experiences.
-            for exp in exps:
-                if exp.skills_used:
-                    for s in exp.skills_used:
-                        sl = s.lower()
-                        if sl not in result["skill_names"]:
-                            result["skill_names"].append(sl)
-
-            self.logger.debug(
-                "Loaded profile skills",
-                profile_id=str(profile_row.id),
-                skill_count=len(result["skill_names"]),
-                experience_years=round(result["experience_years"], 1),
-            )
-
+        self.logger.debug(
+            "Loaded profile skills",
+            profile_id=profile_id or "(active)",
+            skill_count=len(result.get("skill_names", [])),
+            experience_years=round(result.get("experience_years", 0.0), 1),
+        )
         return result
 
     # ── Step 3: Skill matching ─────────────────────────────────────────────
@@ -603,11 +550,3 @@ class ContextAgent(BaseAgent):
                     )
                 )
         return results
-
-
-# ── Late imports (avoid circular dependencies) ────────────────────────────────
-
-import datetime  # noqa: E402
-import statistics  # noqa: E402
-
-from core.database import get_session  # noqa: E402, I001

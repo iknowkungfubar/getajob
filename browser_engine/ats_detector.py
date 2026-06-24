@@ -237,7 +237,7 @@ class ATSDetector:
         is_form = await self._check_application_form(page)
         signals["is_application_form"] = is_form
 
-        profile = ATSProfile.GENERIC if is_form else ATSProfile.GENERIC
+        profile = ATSProfile.GENERIC if is_form else ATSProfile.UNKNOWN
         signals["fallback_reason"] = "no_ats_signals_found"
 
         self._logger.info(

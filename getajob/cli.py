@@ -22,7 +22,9 @@ from __future__ import annotations as _annotations
 
 import asyncio
 import sys
+from collections.abc import Coroutine
 from pathlib import Path
+from typing import Any
 from typing import Annotated, Optional
 
 import structlog
@@ -485,13 +487,13 @@ def setup(
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 
-def _run_async(coro: object) -> None:
+def _run_async(coro: Coroutine[Any, Any, Any]) -> None:
     """Run an async coroutine in a new event loop.
 
     Catches :exc:`KeyboardInterrupt` for clean shutdown on Ctrl+C.
     """
     try:
-        asyncio.run(coro)  # type: ignore[arg-type]
+        asyncio.run(coro)
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted by user.[/]")
         sys.exit(0)

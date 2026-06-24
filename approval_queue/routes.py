@@ -401,7 +401,6 @@ async def bulk_approve(
             except Exception:
                 results.append({"application_id": app_id, "status": "error", "detail": "Invalid transition"})
                 continue
-                continue
 
             stmt = update(Application).where(Application.id == app_uuid).values(state=ApplicationState.STAGED)
             await db.execute(stmt)

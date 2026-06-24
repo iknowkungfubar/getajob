@@ -1,0 +1,222 @@
+# GetAJob — CI Pipeline
+#
+# Runs on push to main and on all pull requests.
+# Jobs: lint → typecheck → test → security
+# Uses uv for fast dependency installation and caching.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Cache ruff analysis
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ruff
+            .ruff_cache
+          key: ruff-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ruff-
+
+      - name: Run ruff check
+        run: uv run ruff check .
+
+      - name: Run ruff format check
+        run: uv run ruff format --check .
+
+  typecheck:
+    name: Type Check (mypy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Cache mypy
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/mypy
+            .mypy_cache
+          key: mypy-${{ hashFiles('pyproject.toml', 'uv.lock', '**/*.py') }}
+          restore-keys: |
+            mypy-
+
+      - name: Run mypy
+        run: uv run mypy .
+
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: true
+      matrix:
+        db: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: getajob
+          POSTGRES_PASSWORD: getajob-test
+          POSTGRES_DB: getajob_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Cache pytest
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pytest
+            .pytest_cache
+          key: pytest-${{ matrix.db }}-${{ hashFiles('pyproject.toml', 'uv.lock', 'tests/**/*.py') }}
+          restore-keys: |
+            pytest-${{ matrix.db }}-
+            pytest-
+
+      - name: Run tests (SQLite)
+        if: matrix.db == 'sqlite'
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///test.db
+          ENCRYPTION_KEY: test-key-not-for-prod-32bytes!
+          ENCRYPTION_SALT: deadbeefdeadbeefdeadbeefdeadbeef
+        run: uv run pytest tests/ --cov --cov-report=xml --cov-report=term --timeout=60
+
+      - name: Run tests (PostgreSQL)
+        if: matrix.db == 'postgres'
+        env:
+          DATABASE_URL: postgresql+asyncpg://getajob:getajob-test@localhost:5432/getajob_test
+          ENCRYPTION_KEY: test-key-not-for-prod-32bytes!
+          ENCRYPTION_SALT: deadbeefdeadbeefdeadbeefdeadbeef
+        run: uv run pytest tests/ --cov --cov-report=xml --cov-report=term --timeout=60
+
+      - name: Upload coverage report
+        if: matrix.db == 'sqlite'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 7
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@v3
+        with:
+          extra_args: --only-verified
+
+      - name: Run bandit security linter
+        run: |
+          pip install bandit
+          bandit -r core/ agents/ browser_engine/ profile_engine/ tailoring_engine/ outreach_engine/ approval_queue/ -f json -o bandit-report.json || true
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 30
+
+      - name: Check for .env in working tree
+        run: |
+          if git ls-files --cached | grep -q '\.env$'; then
+            echo "❌ ERROR: .env file is tracked by git!"
+            git ls-files --cached | grep '\.env$'
+            exit 1
+          fi
+          echo "✅ No .env files tracked in git"
+
+      - name: Verify no secrets in pyproject.toml or config YAML
+        run: |
+          ! grep -rE '(sk-ant|api_key|api-key|password|secret).{8,}' config/*.yaml 2>/dev/null || {
+            echo "❌ Possible secret in config YAML!"; exit 1;
+          }
+          echo "✅ No obvious secrets in config files"

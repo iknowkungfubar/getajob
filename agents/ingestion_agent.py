@@ -21,6 +21,7 @@ from __future__ import annotations as _annotations
 import asyncio
 import datetime
 import json
+import re
 import statistics
 import time
 import uuid
@@ -73,8 +74,8 @@ class _TokenBucket:
     def __post_init__(self) -> None:
         self.tokens = self.max_tokens
 
-    def acquire(self, tokens: float = 1.0) -> float:
-        """Block until *tokens* are available and return the wait time (seconds)."""
+    async def acquire(self, tokens: float = 1.0) -> float:
+        """Wait asynchronously until *tokens* are available and return the wait time (seconds)."""
         now = time.monotonic()
         elapsed = now - self._last_refill
         self.tokens = min(self.max_tokens, self.tokens + elapsed * (self.max_tokens / 60.0))
@@ -83,7 +84,7 @@ class _TokenBucket:
         if self.tokens < tokens:
             needed = tokens - self.tokens
             sleep_s = needed / (self.max_tokens / 60.0) if self.max_tokens > 0 else 1.0
-            time.sleep(sleep_s)
+            await asyncio.sleep(sleep_s)
             self.tokens = 0.0
             self._last_refill = time.monotonic()
             return sleep_s
@@ -227,6 +228,14 @@ class IngestionAgent(BaseAgent):
                         "Browser-based source requires Module 4 (stub)",
                         source=source,
                         roles=vector.roles[:3],
+                    )
+                    print(
+                        f"\n  ⚠  Browser-based discovery not yet available for '{source}'. "
+                        f"To enable job discovery from {source}, configure the Browser "
+                        f"Execution Engine (Module 4) with a {source} profile in "
+                        f"browser_engine/ats_profiles/. Add your {source} search "
+                        f"credentials and session configuration to "
+                        f"config/settings.yaml under job_discovery.browser_sources."
                     )
                     continue
 
@@ -614,7 +623,6 @@ class IngestionAgent(BaseAgent):
         text_lower = text.lower()
         found: list[str] = []
         for skill in sorted(known, key=len, reverse=True):
-            import re  # noqa: PLC0415
             pattern = re.compile(r"\b" + re.escape(skill) + r"\b", re.IGNORECASE)
             if pattern.search(text_lower) and skill not in found:
                 found.append(skill.title())
@@ -665,7 +673,7 @@ class IngestionAgent(BaseAgent):
         """Block if the token bucket for *source* is empty."""
         bucket = self._buckets.get(source)
         if bucket is not None:
-            waited = bucket.acquire(1.0)
+            waited = await bucket.acquire(1.0)
             if waited > 0.01:
                 self.logger.debug("Rate-limited", source=source, waited_s=round(waited, 2))
 
@@ -830,7 +838,6 @@ def _extract_salary(raw_job: dict[str, Any]) -> dict[str, Any] | None:
 
     if isinstance(salary, str):
         # Free-text: "$150k - $200k" etc.
-        import re  # noqa: PLC0415
         match = re.search(r"(\d{3,})\s*k?\s*[-–to]+\s*(\d{3,})\s*k?", salary, re.IGNORECASE)
         if match:
             try:

@@ -207,7 +207,8 @@ class ClaudeAPIClient(LLMClient):
                 system=system or "",
                 messages=[{"role": "user", "content": prompt}],
                 # Instruct the model to return a valid JSON object.
-                extra_headers={"anthropic-beta": "max-tokens-3-5-sonnet-2024-07-15"},
+                # No beta header is required for structured output on Claude 4.x.
+                extra_headers={},
             )
             text = resp.content[0].text  # type: ignore[union-attr]
             # Strip markdown fences if present.
