@@ -1,0 +1,155 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GetAJob — docker-compose (Development / Staging)
+#
+# Quick start:
+#   cp env.template .env          # edit with your secrets
+#   docker compose up -d          # start all services
+#   docker compose logs -f        # tail logs for the setup init
+#   open http://localhost:8080    # approval queue
+#
+# To run the pipeline (one-shot):
+#   docker compose run --rm app run
+#
+# To run setup manually (already runs at init):
+#   docker compose run --rm app setup
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: getajob
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER:     ${GETAJOB_DATABASE__USER:-getajob}
+      POSTGRES_PASSWORD: ${GETAJOB_DATABASE__PASSWORD:-change_me_in_production}
+      POSTGRES_DB:       ${GETAJOB_DATABASE__DATABASE:-getajob}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GETAJOB_DATABASE__USER:-getajob} -d ${GETAJOB_DATABASE__DATABASE:-getajob}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Init (run-once setup: migrations, data dirs) ─────────────────────────
+  init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      GETAJOB_ENVIRONMENT:           ${GETAJOB_ENVIRONMENT:-development}
+      GETAJOB_DEBUG:                 ${GETAJOB_DEBUG:-true}
+
+      GETAJOB_DATABASE__HOST:        postgres
+      GETAJOB_DATABASE__PORT:        ${GETAJOB_DATABASE__PORT:-5432}
+      GETAJOB_DATABASE__DATABASE:    ${GETAJOB_DATABASE__DATABASE:-getajob}
+      GETAJOB_DATABASE__USER:        ${GETAJOB_DATABASE__USER:-getajob}
+      GETAJOB_DATABASE__PASSWORD:    ${GETAJOB_DATABASE__PASSWORD:-change_me_in_production}
+
+      GETAJOB_LLM__API_KEY:          ${GETAJOB_LLM__API_KEY:?LLM API key required}
+
+      GETAJOB_REDIS__HOST:           redis
+      GETAJOB_REDIS__PORT:           ${GETAJOB_REDIS__PORT:-6379}
+
+      GETAJOB_SECURITY__ENCRYPTION_KEY:  ${GETAJOB_SECURITY__ENCRYPTION_KEY:?Encryption key required}
+      GETAJOB_SECURITY__ENCRYPTION_SALT: ${GETAJOB_SECURITY__ENCRYPTION_SALT:?Encryption salt required}
+      GETAJOB_SECURITY__APPROVAL_PASSWORD: ${GETAJOB_SECURITY__APPROVAL_PASSWORD:-}
+    volumes:
+      - appdata:/app/data
+    command: ["setup"]
+    restart: no
+
+  # ── Application (approval queue + pipeline) ──────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+    environment:
+      GETAJOB_ENVIRONMENT:           ${GETAJOB_ENVIRONMENT:-development}
+      GETAJOB_DEBUG:                 ${GETAJOB_DEBUG:-false}
+
+      GETAJOB_DATABASE__HOST:        postgres
+      GETAJOB_DATABASE__PORT:        ${GETAJOB_DATABASE__PORT:-5432}
+      GETAJOB_DATABASE__DATABASE:    ${GETAJOB_DATABASE__DATABASE:-getajob}
+      GETAJOB_DATABASE__USER:        ${GETAJOB_DATABASE__USER:-getajob}
+      GETAJOB_DATABASE__PASSWORD:    ${GETAJOB_DATABASE__PASSWORD:-change_me_in_production}
+      GETAJOB_DATABASE__MIN_CONNECTIONS:  ${GETAJOB_DATABASE__MIN_CONNECTIONS:-2}
+      GETAJOB_DATABASE__MAX_CONNECTIONS:  ${GETAJOB_DATABASE__MAX_CONNECTIONS:-10}
+
+      GETAJOB_LLM__PROVIDER:         ${GETAJOB_LLM__PROVIDER:-anthropic}
+      GETAJOB_LLM__API_KEY:          ${GETAJOB_LLM__API_KEY:?LLM API key required}
+      GETAJOB_LLM__MODEL:            ${GETAJOB_LLM__MODEL:-claude-sonnet-4-6}
+      GETAJOB_LLM__MAX_TOKENS:       ${GETAJOB_LLM__MAX_TOKENS:-4096}
+      GETAJOB_LLM__TEMPERATURE:      ${GETAJOB_LLM__TEMPERATURE:-0.7}
+      GETAJOB_LLM__TIMEOUT_SECONDS:  ${GETAJOB_LLM__TIMEOUT_SECONDS:-120}
+
+      GETAJOB_REDIS__HOST:           redis
+      GETAJOB_REDIS__PORT:           ${GETAJOB_REDIS__PORT:-6379}
+      GETAJOB_REDIS__DB:             ${GETAJOB_REDIS__DB:-0}
+
+      GETAJOB_SECURITY__ENCRYPTION_KEY:  ${GETAJOB_SECURITY__ENCRYPTION_KEY:?Encryption key required}
+      GETAJOB_SECURITY__ENCRYPTION_SALT: ${GETAJOB_SECURITY__ENCRYPTION_SALT:?Encryption salt required}
+      GETAJOB_SECURITY__TOKENIZER_SALT:  ${GETAJOB_SECURITY__TOKENIZER_SALT:-}
+      GETAJOB_SECURITY__APPROVAL_PASSWORD: ${GETAJOB_SECURITY__APPROVAL_PASSWORD:-}
+
+      GETAJOB_BROWSER__HEADLESS:      ${GETAJOB_BROWSER__HEADLESS:-true}
+      GETAJOB_BROWSER__VIEWPORT_WIDTH:  ${GETAJOB_BROWSER__VIEWPORT_WIDTH:-1920}
+      GETAJOB_BROWSER__VIEWPORT_HEIGHT: ${GETAJOB_BROWSER__VIEWPORT_HEIGHT:-1080}
+      GETAJOB_BROWSER__LOCALE:        ${GETAJOB_BROWSER__LOCALE:-en-US}
+      GETAJOB_BROWSER__SLOW_MO_MS:    ${GETAJOB_BROWSER__SLOW_MO_MS:-50}
+      GETAJOB_BROWSER__NAVIGATION_TIMEOUT_SECONDS: ${GETAJOB_BROWSER__NAVIGATION_TIMEOUT_SECONDS:-30}
+
+      GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY: ${GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY:-50}
+
+      GETAJOB_LOG_FORMAT:            ${GETAJOB_LOG_FORMAT:-json}
+    ports:
+      - "${GETAJOB_APP_PORT:-8080}:8080"
+    volumes:
+      - appdata:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  appdata:
+    driver: local

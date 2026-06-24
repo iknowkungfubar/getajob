@@ -82,7 +82,7 @@ Key design documents:
 | **Browser Engine** | [`browser_engine/`](browser_engine/) | Stealth automation with ATS profiles (Workday, Greenhouse, Lever, LinkedIn, Indeed) | ⚠️ Known registry bug blocks ATS profiles |
 | **Outreach Engine** | [`outreach_engine/`](outreach_engine/) | Recruiter contact discovery, personalized message gen, email validation | ✅ Complete (not integrated) |
 | **Approval Queue** | [`approval_queue/`](approval_queue/) | FastAPI web UI for HITL review and approval | ⚠️ UI complete, auth pending |
-| **Orchestrator** | [`agents/orchestrator_agent.py`](agents/orchestrator_agent.py) | Main pipeline loop | ❌ Stops at DISCOVERED |
+| **Orchestrator** | [`agents/orchestrator_agent.py`](agents/orchestrator_agent.py) | Main pipeline loop | ✅ DISCOVERED → TAILORED → PENDING_REVIEW |
 
 ---
 
@@ -107,7 +107,7 @@ DISCOVERED → TAILORED → PENDING_REVIEW → STAGED → SUBMITTED → OUTREACH
 | **REJECTED** | Human rejected the application |
 | **FAILED** | Unrecoverable error in processing |
 
-> **Note:** As of 2026-06-24, only the `DISCOVERED` state is reachable through the automated pipeline. The approval queue API can transition to `STAGED` and `REJECTED`. Full pipeline integration is tracked in [Phase 9](docs/architecture.md#modules).
+> **Note:** As of v0.3.0, the automated pipeline reaches `DISCOVERED → TAILORED → PENDING_REVIEW` in a single pass. The approval queue API handles transitions to `STAGED` and `REJECTED`. Remaining states (`SUBMITTED`, `OUTREACH_PENDING`) require the browser engine and outreach module integration.
 
 ---
 
@@ -120,7 +120,7 @@ DISCOVERED → TAILORED → PENDING_REVIEW → STAGED → SUBMITTED → OUTREACH
 - Redis (optional, for production event bus)
 - Playwright browsers (`playwright install chromium`)
 
-### Installation
+### Installation (Local)
 
 ```bash
 # Clone the repo
@@ -145,6 +145,36 @@ cp env.template .env
 getajob setup
 ```
 
+### Docker Quickstart
+
+The fastest way to get the full stack running:
+
+```bash
+# 1. Clone and configure
+git clone https://github.com/iknowkungfubar/getajob.git
+cd getajob
+cp env.template .env
+
+# 2. Edit .env with your API keys and secrets (at minimum GETAJOB_LLM__API_KEY)
+#    Set GETAJOB_SECURITY__APPROVAL_PASSWORD for production use.
+
+# 3. Start all services
+docker compose up -d
+
+# 4. Watch the init container run setup (migrations, data dirs)
+docker compose logs -f init
+
+# 5. Open the approval queue
+open http://localhost:8080
+
+# 6. Run the pipeline (one-shot)
+docker compose run --rm app run
+```
+
+> **Note:** The `docker compose up -d` command starts PostgreSQL, Redis, and the
+> approval queue.  An `init` container runs `getajob setup` once and exits.
+> The `app` service waits for init to complete before starting.
+
 ### Usage
 
 ```bash
@@ -163,6 +193,111 @@ getajob serve
 # Tailor a specific job
 getajob tailor <job-id>
 ```
+
+---
+
+## Docker Deployment
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  docker-compose.yml                                          │
+│                                                              │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────────────┐   │
+│  │ Postgres │    │  Redis   │    │   App (FastAPI +      │   │
+│  │  16-alp  │◄──►│  7-alp   │◄──►│   pipeline daemon)    │   │
+│  └──────────┘    └──────────┘    │  :8080 approval queue │   │
+│                                  └──────────────────────┘   │
+│  ┌──────────┐                                               │
+│  │  Init    │  ← runs `getajob setup` once, then exits      │
+│  └──────────┘                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Services
+
+| Service  | Image                          | Purpose                                |
+|----------|--------------------------------|----------------------------------------|
+| `app`    | `getajob` (build from `Dockerfile`) | FastAPI approval queue + pipeline   |
+| `postgres` | `postgres:16-alpine`           | State machine, application store       |
+| `redis`  | `redis:7-alpine`               | Async event bus, caching               |
+| `init`   | `getajob` (build)              | Run-once setup (migrations, data dirs) |
+
+### Volumes
+
+| Volume      | Mount Point                    | Data                           |
+|-------------|--------------------------------|--------------------------------|
+| `pgdata`    | `/var/lib/postgresql/data`     | Database files                 |
+| `redisdata` | `/data`                        | Redis persistence (AOF/RDB)    |
+| `appdata`   | `/app/data`                    | Resume PDFs, screenshots, etc. |
+
+### Environment Variables
+
+The compose file reads `GETAJOB_*` variables from your `.env` file.  Required
+variables are validated at container start — compose will refuse to start if
+they are missing:
+
+| Variable | Required | Default |
+|----------|----------|---------|
+| `GETAJOB_LLM__API_KEY` | ✅ Yes | — |
+| `GETAJOB_SECURITY__ENCRYPTION_KEY` | ✅ Yes | — |
+| `GETAJOB_SECURITY__ENCRYPTION_SALT` | ✅ Yes | — |
+| `GETAJOB_DATABASE__PASSWORD` | ✅ Yes | `change_me_in_production` |
+| `GETAJOB_SECURITY__APPROVAL_PASSWORD` | ⚠️ Production | — |
+| `GETAJOB_APP_PORT` | No | `8080` |
+
+### Container Management
+
+```bash
+# Start everything
+docker compose up -d
+
+# Tail logs
+docker compose logs -f app
+
+# Run the pipeline (one-shot)
+docker compose run --rm app run
+
+# Run setup manually
+docker compose run --rm app setup
+
+# Open a shell in the app container
+docker compose exec app bash
+
+# Stop all services
+docker compose down
+
+# Stop and delete volumes (⚠️ destroys data)
+docker compose down -v
+```
+
+### Production Deployment Checklist
+
+- [ ] **Set `GETAJOB_ENVIRONMENT=production`** — enables HSTS headers,
+      requires the approval password, disables hot-reload.
+- [ ] **Set `GETAJOB_SECURITY__APPROVAL_PASSWORD`** — a strong random string
+      for the approval queue login.  Not the same as the database password.
+- [ ] **Set `GETAJOB_SECURITY__ENCRYPTION_KEY`** and **`_ENCRYPTION_SALT`** —
+      generate fresh random values per deployment.  Key loss = data loss.
+- [ ] **Change the database password** — do not use `change_me_in_production`.
+- [ ] **Use HTTPS in production** — front the app container with a reverse
+      proxy (nginx / Caddy / Traefik) for TLS termination.
+- [ ] **Restrict CORS** — update `allow_origins` in `approval_queue/main.py`
+      to your actual domain, or remove the middleware and rely on the proxy.
+- [ ] **Pin image tags** — replace `postgres:16-alpine` and `redis:7-alpine`
+      with exact versions (e.g. `postgres:16.4-alpine3.20`).
+- [ ] **Enable Redis password** — set `GETAJOB_REDIS__PASSWORD` and uncomment
+      the line in `env.template`.
+- [ ] **Add resource limits** — un-comment `deploy.resources` in the compose
+      file for production workloads.
+- [ ] **Run database migrations** — the `init` container handles this
+      automatically on first start.  For upgrades, run manually:
+      `docker compose run --rm app setup`.
+- [ ] **Schedule backups** — implement automated pg_dump + encrypted PII
+      backups (see [Backup & Recovery](docs/deployment.md#backup--recovery)).
+- [ ] **Enable structured logging** — set `GETAJOB_LOG_FORMAT=json` and ship
+      logs to your observability backend (ELK / Loki / Datadog).
 
 ---
 
@@ -340,10 +475,10 @@ The project uses **GitHub Actions** for continuous integration. See [`.github/wo
 
 | Job | Tool | Purpose |
 |-----|------|---------|
-| **Lint** | Ruff | Code style and correctness |
+| **Lint** | Ruff | Code style, formatting, and correctness |
 | **Type Check** | mypy (strict) | Static type verification |
-| **Test** | pytest + pytest-cov | Unit + integration tests (SQLite + PostgreSQL) |
-| **Security** | Bandit + TruffleHog | Vulnerability scanning + secrets detection |
+| **Test** | pytest + pytest-cov | Unit + integration tests (SQLite) with coverage |
+| **Security** | TruffleHog + Bandit + pip-audit | Secrets detection, SAST, dependency vulnerability scan |
 
 ### Status Badges
 

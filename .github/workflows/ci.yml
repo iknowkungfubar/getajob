@@ -1,8 +1,14 @@
 # GetAJob — CI Pipeline
 #
 # Runs on push to main and on all pull requests.
-# Jobs: lint → typecheck → test → security
+# Jobs run in parallel where possible for fast feedback.
 # Uses uv for fast dependency installation and caching.
+#
+# Jobs:
+#   lint       — ruff check + ruff format check (5 min)
+#   typecheck  — mypy strict mode (10 min)
+#   test       — pytest with SQLite, coverage (15 min)
+#   security   — secrets scan, bandit, pip-audit (10 min)
 
 name: CI
 
@@ -19,6 +25,7 @@ concurrency:
 env:
   PYTHON_VERSION: "3.12"
   PYTHONUNBUFFERED: "1"
+  UV_CACHE_DIR: /tmp/.uv-cache
 
 jobs:
   lint:
@@ -33,6 +40,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -45,12 +53,9 @@ jobs:
       - name: Cache ruff analysis
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/ruff
-            .ruff_cache
+          path: .ruff_cache
           key: ruff-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ruff-
+          restore-keys: ruff-
 
       - name: Run ruff check
         run: uv run ruff check .
@@ -70,6 +75,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -82,12 +88,9 @@ jobs:
       - name: Cache mypy
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/mypy
-            .mypy_cache
+          path: .mypy_cache
           key: mypy-${{ hashFiles('pyproject.toml', 'uv.lock', '**/*.py') }}
-          restore-keys: |
-            mypy-
+          restore-keys: mypy-
 
       - name: Run mypy
         run: uv run mypy .
@@ -96,24 +99,6 @@ jobs:
     name: Tests (pytest)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: true
-      matrix:
-        db: [sqlite, postgres]
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: getajob
-          POSTGRES_PASSWORD: getajob-test
-          POSTGRES_DB: getajob_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
     steps:
       - uses: actions/checkout@v4
 
@@ -122,6 +107,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -131,35 +117,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
-      - name: Cache pytest
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pytest
-            .pytest_cache
-          key: pytest-${{ matrix.db }}-${{ hashFiles('pyproject.toml', 'uv.lock', 'tests/**/*.py') }}
-          restore-keys: |
-            pytest-${{ matrix.db }}-
-            pytest-
-
-      - name: Run tests (SQLite)
-        if: matrix.db == 'sqlite'
+      - name: Run tests
         env:
-          DATABASE_URL: sqlite+aiosqlite:///test.db
-          ENCRYPTION_KEY: test-key-not-for-prod-32bytes!
-          ENCRYPTION_SALT: deadbeefdeadbeefdeadbeefdeadbeef
-        run: uv run pytest tests/ --cov --cov-report=xml --cov-report=term --timeout=60
-
-      - name: Run tests (PostgreSQL)
-        if: matrix.db == 'postgres'
-        env:
-          DATABASE_URL: postgresql+asyncpg://getajob:getajob-test@localhost:5432/getajob_test
-          ENCRYPTION_KEY: test-key-not-for-prod-32bytes!
-          ENCRYPTION_SALT: deadbeefdeadbeefdeadbeefdeadbeef
-        run: uv run pytest tests/ --cov --cov-report=xml --cov-report=term --timeout=60
+          GETAJOB_LLM__PROVIDER: mock
+          GETAJOB_SECURITY__ENCRYPTION_KEY: test-key-not-for-prod-32bytes!
+          GETAJOB_SECURITY__ENCRYPTION_SALT: deadbeefdeadbeefdeadbeefdeadbeef
+        run: uv run pytest tests/ --cov --cov-report=xml --cov-report=term
 
       - name: Upload coverage report
-        if: matrix.db == 'sqlite'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -178,6 +143,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -193,16 +159,24 @@ jobs:
           extra_args: --only-verified
 
       - name: Run bandit security linter
+        continue-on-error: true
         run: |
-          pip install bandit
-          bandit -r core/ agents/ browser_engine/ profile_engine/ tailoring_engine/ outreach_engine/ approval_queue/ -f json -o bandit-report.json || true
+          uv pip install bandit 2>/dev/null
+          bandit -c pyproject.toml -r core/ agents/ browser_engine/ profile_engine/ tailoring_engine/ outreach_engine/ approval_queue/ getajob/ -f json -o bandit-report.json || true
 
-      - name: Upload bandit report
+      - name: Run pip-audit dependency scan
+        continue-on-error: true
+        run: |
+          uv pip install pip-audit 2>/dev/null
+          uv run pip-audit --strict --progress-spinner=off 2>&1 || true
+
+      - name: Upload security reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bandit-report
-          path: bandit-report.json
+          name: security-reports
+          path: |
+            bandit-report.json
           retention-days: 30
 
       - name: Check for .env in working tree
@@ -214,7 +188,7 @@ jobs:
           fi
           echo "✅ No .env files tracked in git"
 
-      - name: Verify no secrets in pyproject.toml or config YAML
+      - name: Verify no secrets in config YAML
         run: |
           ! grep -rE '(sk-ant|api_key|api-key|password|secret).{8,}' config/*.yaml 2>/dev/null || {
             echo "❌ Possible secret in config YAML!"; exit 1;

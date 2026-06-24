@@ -149,9 +149,16 @@ appendfsync everysec
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | Async database connection string | `postgresql+asyncpg://user:pass@host:5432/getajob` |
-| `ENCRYPTION_KEY` | Master key for AES-256-GCM PII encryption | `generate with: openssl rand -base64 32` |
-| `ENCRYPTION_SALT` | Salt for PBKDF2 key derivation (hex, 32 chars) | `generate with: openssl rand -hex 16` |
+| `GETAJOB_DATABASE__PASSWORD` | PostgreSQL password | `generate a random 32-char string` |
+| `GETAJOB_LLM__API_KEY` | Claude / LLM provider API key | `sk-ant-xxxxxxxxxxxxx` |
+| `GETAJOB_SECURITY__ENCRYPTION_KEY` | Master key for AES-256-GCM PII encryption (64 hex chars) | `openssl rand -hex 32` |
+| `GETAJOB_SECURITY__ENCRYPTION_SALT` | Salt for PBKDF2 key derivation (32 hex chars) | `openssl rand -hex 16` |
+
+### Approval Queue
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GETAJOB_SECURITY__APPROVAL_PASSWORD` | Password for the HITL approval queue web UI | `generate a strong random string` |
 
 ### LLM / AI
 
@@ -191,99 +198,65 @@ appendfsync everysec
 
 ## Docker Deployment
 
-> **Note:** Docker support is in development. This section provides the planned configuration.
+Docker support is implemented and ready. The setup uses:
+- A multi-stage `Dockerfile` (uv builder + slim runtime with Chromium)
+- `docker-compose.yml` with PostgreSQL 16, Redis 7, and the application
+- An `init` container that runs `getajob setup` once on startup
+- A non-root user (`getajob`, UID 1000) inside the container
+
+### Quick Start
+
+```bash
+cp env.template .env
+# Fill in GETAJOB_LLM__API_KEY, GETAJOB_SECURITY__ENCRYPTION_KEY,
+# GETAJOB_SECURITY__ENCRYPTION_SALT, and GETAJOB_DATABASE__PASSWORD
+
+docker compose up -d
+docker compose logs -f init   # wait for setup to finish
+open http://localhost:8080     # approval queue
+```
 
 ### Project Structure
 
 ```
 getajob/
-├── Dockerfile
-├── docker-compose.yml
-├── docker-compose.prod.yml
-└── .dockerignore
+├── Dockerfile              # Multi-stage build
+├── docker-compose.yml      # Dev / staging compose config
+└── .dockerignore           # Build context exclusions
 ```
 
-### Dockerfile (Planned)
+### Files
 
-```dockerfile
-FROM python:3.12-slim AS builder
+| File | Purpose |
+|------|---------|
+| [`Dockerfile`](../Dockerfile) | Multi-stage: builder installs deps via uv, runtime includes Chromium + Playwright |
+| [`docker-compose.yml`](../docker-compose.yml) | Full stack: app, postgres:16-alpine, redis:7-alpine, init container |
+| [`.dockerignore`](../.dockerignore) | Excludes venvs, caches, secrets, tests, and data from the build context |
 
-WORKDIR /app
-COPY pyproject.toml uv.lock ./
-RUN pip install uv && uv sync --no-dev --frozen
+### Container Details
 
-FROM python:3.12-slim AS runtime
-WORKDIR /app
-COPY --from=builder /app/.venv .venv
-COPY . .
+| Aspect | Detail |
+|--------|--------|
+| Base image | `python:3.12-slim` |
+| Browser | Chromium (via Playwright), installed to `/opt/ms-playwright` |
+| User | `getajob` (non-root, UID 1000) |
+| Workdir | `/app` |
+| Entrypoint | `getajob` CLI |
+| Default command | `serve` (approval queue on port 8080) |
+| Healthcheck | `curl -sf http://127.0.0.1:8080/api/health` every 30 s |
+| Data volume | `/app/data` (bind-mount for persistence) |
 
-# Install Chromium for Playwright
-RUN .venv/bin/playwright install chromium \
-    && .venv/bin/playwright install-deps chromium
+> **⚠️ Chromium in Docker:** The browser engine applies `--no-sandbox`
+> automatically when `GETAJOB_BROWSER__HEADLESS=true`.  If you override this
+> to `false`, supply `GETAJOB_BROWSER__CHROMIUM_ARGS=--no-sandbox,--disable-dev-shm-usage`.
 
-ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONUNBUFFERED=1
+### Volumes
 
-EXPOSE 8080
-CMD ["getajob", "serve"]
-```
-
-### Docker Compose (Development)
-
-```yaml
-version: "3.8"
-services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: getajob
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: getajob
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U getajob"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-  app:
-    build: .
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql+asyncpg://getajob:${POSTGRES_PASSWORD}@db:5432/getajob
-      REDIS_URL: redis://redis:6379/0
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      ENCRYPTION_SALT: ${ENCRYPTION_SALT}
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./data:/app/data
-      - ./config:/app/config
-
-volumes:
-  pgdata:
-  redisdata:
-```
+| Compose Volume | Container Mount | Purpose |
+|----------------|----------------|---------|
+| `pgdata` | (Postgres data dir) | Database persistence |
+| `redisdata` | `/data` | Redis AOF/RDB snapshots |
+| `appdata` | `/app/data` | Runtime data (resumes, screenshots) |
 
 ---
 

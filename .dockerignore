@@ -1,0 +1,52 @@
+# ── Virtual environments & caches ────────────────────────────────────────────
+.venv
+venv
+env/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# ── Version control ──────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+CLAUDE.md
+.claude/
+
+# ── Secrets (never ship these into an image) ─────────────────────────────────
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.cert
+credentials.json
+config/credentials.yaml
+config/secrets.yaml
+
+# ── Development & CI config ──────────────────────────────────────────────────
+tests/
+test_results/
+htmlcov/
+.coverage
+coverage.xml
+*.log
+logs/
+
+# ── IDE / editor ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ── Runtime data (bind-mount, never bake in) ─────────────────────────────────
+data/
+
+# ── Reports & docs (not needed in production image) ──────────────────────────
+reports/
+profiling/
+docs/
+*.md
