@@ -64,19 +64,6 @@ dependencies = [
     "rich>=13.9.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    # Testing
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=5.0.0",
-
-    # Tooling
-    "ruff>=0.7.0",
-    "mypy>=1.13.0",
-    "pre-commit>=4.0.0",
-]
-
 [project.scripts]
 getajob = "getajob.cli:app"
 
@@ -187,6 +174,17 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
+    # Testing
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+
+    # Tooling
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+
+    # Dev-only runtime deps
     "aiosqlite>=0.22.1",
 ]
 
