@@ -479,7 +479,7 @@ def setup(
         finally:
             await engine.dispose()
 
-    _run_async(_run)
+    _run_async(_run())
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────

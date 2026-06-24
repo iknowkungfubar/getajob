@@ -9,11 +9,8 @@ from __future__ import annotations as _annotations
 __version__ = "0.1.0"
 __all__: list[str] = [
     "__version__",
-    "cli_app",
     "run_pipeline",
 ]
-
-from getajob.cli import app as cli_app
 
 
 async def run_pipeline(

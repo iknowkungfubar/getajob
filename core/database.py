@@ -14,6 +14,7 @@ Usage::
 from __future__ import annotations as _annotations
 
 import contextlib
+import os
 from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any
 
@@ -29,7 +30,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine as _create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.pool import Pool
+from sqlalchemy.pool import NullPool, Pool
 
 from core.config import get_settings
 from core.exceptions import ConfigurationError
@@ -84,6 +85,18 @@ def create_engine(**kwargs: Any) -> AsyncEngine:
     """
     settings = get_settings()
     db = settings.database
+
+    # Allow direct URL override (supports sqlite+aiosqlite for local dev).
+    url = kwargs.pop("url", None) or os.environ.get("GETAJOB_DATABASE__URL", "")
+    if url:
+        pool_kw = {}
+        if url.startswith("sqlite"):
+            pool_kw["poolclass"] = NullPool
+        else:
+            pool_kw["pool_pre_ping"] = True
+        engine = _create_async_engine(url, echo=settings.debug, **pool_kw, **kwargs)
+        logger.info("Database engine created (from URL)", url=url.split("://")[0] + "://...")
+        return engine
 
     # Allow per-call overrides of individual fields.
     host = kwargs.pop("host", db.host)
