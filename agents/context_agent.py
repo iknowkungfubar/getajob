@@ -371,7 +371,11 @@ class ContextAgent(BaseAgent):
                 # Accumulate experience years.
                 if exp_row.start_date:
                     end = exp_row.end_date or datetime.datetime.now(datetime.UTC)
-                    delta = (end - exp_row.start_date).days / 365.25
+                    start = exp_row.start_date
+                    # Normalize to date objects for safe subtraction
+                    end = end.date() if isinstance(end, datetime.datetime) else end
+                    start = start.date() if isinstance(start, datetime.datetime) else start
+                    delta = (end - start).days / 365.25
                     result["experience_years"] += max(0.0, delta)
 
             # Also add skills from work experiences.

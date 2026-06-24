@@ -71,6 +71,8 @@ class OrchestratorAgent(BaseAgent):
         *,
         llm_client: LLMClient | None = None,
         event_bus: Any | None = None,
+        min_match_score: float = 0.0,
+        batch_size: int = 100,
     ) -> None:
         """Initialise the orchestrator.
 
@@ -81,11 +83,16 @@ class OrchestratorAgent(BaseAgent):
                 instance.  The global client is resolved when ``None``.
             event_bus: An optional :class:`~core.event_bus.EventBus`.
                 Falls back to an in-memory bus in development/testing.
+            min_match_score: Minimum context-match score (0.0-1.0) for a
+                listing to advance past analysis.
+            batch_size: Maximum number of listings to process per cycle.
         """
         super().__init__(name="orchestrator", event_bus=event_bus)
 
         self._engine: AsyncEngine = engine or create_engine()
         self._llm: LLMClient = llm_client or get_llm_client()
+        self._min_match_score: float = min_match_score
+        self._batch_size: int = batch_size
 
         # Child agents -- lazy-initialised so they share the orchestrator's
         # engine and bus rather than creating their own.
@@ -111,6 +118,19 @@ class OrchestratorAgent(BaseAgent):
         await super().start()
 
         self._active_profile_id = await self._resolve_active_profile()
+
+        # Initialise child agents with shared engine and event bus.
+        self._ingestion = IngestionAgent(
+            engine=self._engine,
+            event_bus=self._event_bus,
+        )
+        self._context = ContextAgent(
+            engine=self._engine,
+            llm_client=self._llm,
+            event_bus=self._event_bus,
+        )
+        await self._ingestion.start()
+        await self._context.start()
 
         self.logger.info(
             "Orchestrator agent initialised",
@@ -215,6 +235,16 @@ class OrchestratorAgent(BaseAgent):
                 )
                 self._stats["jobs_analyzed"] += 1
 
+                # Skip low-match listings when threshold is set.
+                if self._min_match_score > 0 and analysis.match_score < self._min_match_score:
+                    self.logger.debug(
+                        "Skipping listing — below min_match_score threshold",
+                        job_id=str(listing.id),
+                        match_score=analysis.match_score,
+                        threshold=self._min_match_score,
+                    )
+                    continue
+
                 app = await self._create_application(listing, analysis)
                 self._stats["applications_created"] += 1
 
@@ -240,8 +270,6 @@ class OrchestratorAgent(BaseAgent):
                 self.logger.error(
                     "Failed to process listing",
                     job_id=str(listing.id),
-                    company=listing.company,
-                    title=listing.title,
                     error=str(exc),
                 )
             except Exception:

@@ -24,6 +24,7 @@ def sample_job_listing() -> JobListingRead:
     return JobListingRead(
         id=uuid.uuid4(),
         source="linkedin",
+        source_id=None,
         company="Acme Corp",
         title="Senior Software Engineer",
         location="San Francisco, CA",
@@ -167,9 +168,10 @@ class TestBuildPrompt:
         sample_job_listing: JobListingRead,
         sample_profile: ProfileRead,
     ) -> None:
+        from core.llm_client import MockLLMClient
         generator = MessageGenerator(
             system_prompt_path="/dev/null",
-            llm_client=None,
+            llm_client=MockLLMClient(),
         )
         tone_config = {
             "label": "Professional",
