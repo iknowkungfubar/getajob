@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}GetAJob — Dashboard{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="page-header">
+    <div class="page-header-left">
+        <h2>Dashboard</h2>
+        <span class="page-subtitle">
+            {% if pagination %}{{ pagination.total }} total applications{% endif %}
+        </span>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-secondary" onclick="location.reload()" title="Refresh">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Stat cards -->
+<div class="stat-cards" id="stats-panel">
+    <div class="stat-card stat-card-pending">
+        <div class="stat-icon stat-icon-pending">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-value" id="stat-pending">{{ stats.pending_review if stats else '—' }}</div>
+            <div class="stat-label">Pending Review</div>
+        </div>
+    </div>
+    <div class="stat-card stat-card-success">
+        <div class="stat-icon stat-icon-success">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-value" id="stat-approved">{{ stats.approved_today if stats else '—' }}</div>
+            <div class="stat-label">Approved Today</div>
+        </div>
+    </div>
+    <div class="stat-card stat-card-info">
+        <div class="stat-icon stat-icon-info">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-value" id="stat-submitted">{{ stats.submitted if stats else '—' }}</div>
+            <div class="stat-label">Submitted</div>
+        </div>
+    </div>
+    <div class="stat-card stat-card-danger">
+        <div class="stat-icon stat-icon-danger">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <div class="stat-value" id="stat-failed">{{ stats.failed if stats else '—' }}</div>
+            <div class="stat-label">Failed</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <label for="state-filter" class="filter-label">State</label>
+        <select id="state-filter" class="filter-select" onchange="applyFilters()">
+            <option value="">All States</option>
+            <option value="PENDING_REVIEW">Pending Review</option>
+            <option value="STAGED">Approved (Staged)</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="FAILED">Failed</option>
+            <option value="TAILORED">Tailored</option>
+            <option value="DISCOVERED">Discovered</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="company-search" class="filter-label">Company</label>
+        <input id="company-search" type="text" class="filter-input"
+               placeholder="Search by company..." oninput="applyFilters()">
+    </div>
+    <div class="filter-group filter-actions">
+        <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+        <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+    </div>
+</div>
+
+<!-- Applications table -->
+<div class="table-container">
+    <table class="app-table" id="applications-table">
+        <thead>
+            <tr>
+                <th class="col-check">
+                    <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+                </th>
+                <th class="col-company">Company</th>
+                <th class="col-role">Role</th>
+                <th class="col-state">Status</th>
+                <th class="col-date">Date</th>
+                <th class="col-actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="applications-body">
+            {% if applications %}
+                {% for app in applications %}
+                <tr class="app-row" data-application-id="{{ app.id }}" data-state="{{ app.state }}">
+                    <td class="col-check">
+                        <input type="checkbox" class="app-checkbox" value="{{ app.id }}"
+                               onchange="updateBulkBar()">
+                    </td>
+                    <td class="col-company">
+                        <div class="company-cell">
+                            <span class="company-avatar">{{ app.job_listing.company[:1] }}</span>
+                            <span class="company-name">{{ app.job_listing.company }}</span>
+                        </div>
+                    </td>
+                    <td class="col-role">
+                        <div class="role-cell">
+                            <span class="role-title">{{ app.job_listing.title }}</span>
+                            <span class="role-location">{{ app.job_listing.location }}</span>
+                        </div>
+                    </td>
+                    <td class="col-state">
+                        {% set state = app.state %}
+                        {% if state == 'PENDING_REVIEW' %}
+                            <span class="status-badge status-pending">Pending</span>
+                        {% elif state == 'STAGED' %}
+                            <span class="status-badge status-success">Approved</span>
+                        {% elif state == 'SUBMITTED' %}
+                            <span class="status-badge status-info">Submitted</span>
+                        {% elif state == 'REJECTED' %}
+                            <span class="status-badge status-rejected">Rejected</span>
+                        {% elif state == 'FAILED' %}
+                            <span class="status-badge status-danger">Failed</span>
+                        {% elif state == 'TAILORED' %}
+                            <span class="status-badge status-warning">Tailored</span>
+                        {% elif state == 'DISCOVERED' %}
+                            <span class="status-badge status-neutral">Discovered</span>
+                        {% elif state == 'OUTREACH_PENDING' %}
+                            <span class="status-badge status-info">Outreach</span>
+                        {% else %}
+                            <span class="status-badge status-neutral">{{ state }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-date">
+                        <span class="date-text" title="{{ app.created_at }}">
+                            {{ app.created_at[:10] if app.created_at else '—' }}
+                        </span>
+                    </td>
+                    <td class="col-actions">
+                        <div class="action-buttons">
+                            <a href="/review/{{ app.id }}" class="btn btn-sm btn-secondary" title="Review">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </a>
+                            {% if app.state == 'PENDING_REVIEW' %}
+                            <button class="btn btn-sm btn-success"
+                                    hx-post="/api/applications/{{ app.id }}/review"
+                                    hx-vals='{"action": "approve"}'
+                                    hx-trigger="click"
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    hx-headers='{"Content-Type": "application/json"}'
+                                    title="Approve">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-sm btn-danger"
+                                    hx-post="/api/applications/{{ app.id }}/review"
+                                    hx-vals='{"action": "reject"}'
+                                    hx-trigger="click"
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    hx-headers='{"Content-Type": "application/json"}'
+                                    title="Reject">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="6" class="empty-cell">
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        <p>No applications found</p>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if pagination and pagination.total_pages > 1 %}
+<div class="pagination" id="pagination">
+    <button class="btn btn-secondary pagination-btn"
+            onclick="changePage(-1)" id="prev-page"
+            {% if pagination.page <= 1 %}disabled{% endif %}>
+        ← Previous
+    </button>
+    <div class="pagination-info" id="pagination-info">
+        <span class="page-current">{{ pagination.page }}</span>
+        <span class="page-sep">/</span>
+        <span class="page-total">{{ pagination.total_pages }}</span>
+        <span class="page-count">({{ pagination.total }} total)</span>
+    </div>
+    <button class="btn btn-secondary pagination-btn"
+            onclick="changePage(1)" id="next-page"
+            {% if pagination.page >= pagination.total_pages %}disabled{% endif %}>
+        Next →
+    </button>
+</div>
+{% endif %}
+
+<!-- Bulk actions bar -->
+<div class="bulk-bar" id="bulk-bar" style="display: none;">
+    <span id="selected-count" class="bulk-count">0 selected</span>
+    <div class="bulk-actions">
+        <button class="btn btn-primary" onclick="bulkApprove()" id="bulk-approve-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Approve Selected
+        </button>
+        <button class="btn btn-secondary" onclick="clearSelection()">Cancel</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialise dashboard state from server-rendered data.
+    var currentPage = {{ pagination.page if pagination else 1 }};
+    var currentState = '{{ request.url.query_params.state or "" }}';
+</script>
+{% endblock %}

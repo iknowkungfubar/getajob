@@ -1,0 +1,258 @@
+# ── GetAJob Platform Configuration Overlay ──────────────────────────────────
+#
+# This YAML file overlays environment-variable defaults.  It is loaded by
+# core.config.load_config() and merged into the pydantic-settings hierarchy.
+#
+# WARNING: No secrets here — use .env for API keys and passwords.
+
+# ── Runtime ──────────────────────────────────────────────────────────────────
+
+environment: "development"
+debug: false
+log_format: "console"
+
+# ── Search Vectors ────────────────────────────────────────────────────────────
+#
+# Each search vector defines a batch of roles, keywords, sources, and
+# constraints.  The ingestion agent iterates over all vectors and discovers
+# matching job listings from each configured source.
+
+search_vectors:
+  - roles:
+      - "senior software engineer"
+      - "staff engineer"
+      - "principal engineer"
+    keywords:
+      - "rust"
+      - "python"
+      - "distributed systems"
+      - "agentic ai"
+      - "systems engineering"
+    locations:
+      - "remote"
+      - "san francisco"
+      - "new york"
+      - "seattle"
+    seniority:
+      - "senior"
+      - "staff"
+      - "principal"
+      - "lead"
+    sources:
+      - "linkedin"
+      - "indeed"
+      - "greenhouse"
+      - "workday"
+      - "lever"
+    max_applications_per_day: 50
+
+  - roles:
+      - "backend engineer"
+      - "infrastructure engineer"
+      - "platform engineer"
+    keywords:
+      - "kubernetes"
+      - "aws"
+      - "terraform"
+      - "postgresql"
+      - "kafka"
+    locations:
+      - "remote"
+      - "san francisco"
+      - "new york"
+    seniority:
+      - "senior"
+      - "staff"
+    sources:
+      - "linkedin"
+      - "greenhouse"
+      - "lever"
+    max_applications_per_day: 25
+
+  - roles:
+      - "ml engineer"
+      - "ai engineer"
+      - "llm engineer"
+    keywords:
+      - "llm"
+      - "machine learning"
+      - "pytorch"
+      - "nlp"
+      - "rag"
+      - "langchain"
+    locations:
+      - "remote"
+      - "san francisco"
+      - "new york"
+      - "seattle"
+    seniority:
+      - "senior"
+      - "staff"
+    sources:
+      - "linkedin"
+      - "greenhouse"
+      - "lever"
+      - "workday"
+    max_applications_per_day: 15
+
+# ── Rate Limits ──────────────────────────────────────────────────────────────
+#
+# Maximum queries per minute per source platform.  The ingestion agent uses
+# a token-bucket per source to stay within these limits.
+
+rate_limits:
+  linkedin: 10
+  indeed: 15
+  greenhouse: 30
+  workday: 20
+  lever: 30
+  generic: 10
+
+# ── Search Filters (global defaults) ──────────────────────────────────────────
+
+search_filters:
+  locations:
+    - "remote"
+    - "san francisco"
+    - "new york"
+    - "seattle"
+  seniority:
+    - "senior"
+    - "staff"
+    - "principal"
+    - "lead"
+  remote_only: false
+  posted_within_days: 14
+  salary_minimum: 0
+
+# ── ATS Platform Profiles ────────────────────────────────────────────────────
+#
+# Navigation hints for the Browser Execution Engine.  Each profile includes
+# common login URLs, application endpoints, and timing delays that simulate
+# human interaction patterns on that platform.
+
+ats_profiles:
+  greenhouse:
+    login_url: "https://app.greenhouse.io/users/sign_in"
+    application_url_template: "https://boards.greenhouse.io/{company}/jobs/{job_id}"
+    selectors:
+      resume_upload: "input[data-source='file-upload'][accept*='pdf']"
+      submit_button: "button[type='submit']:has-text('Submit')"
+      first_name: "input[name='first_name']"
+      last_name: "input[name='last_name']"
+      email: "input[name='email']"
+      phone: "input[name='phone']"
+    delays:
+      page_load: 2.5
+      typing: 0.08
+      between_fields: 0.4
+      pre_submit_pause: 1.5
+
+  lever:
+    login_url: "https://hire.lever.co/signin"
+    application_url_template: "https://jobs.lever.co/{company}/{job_id}"
+    selectors:
+      resume_upload: "input[type='file'][accept*='pdf']"
+      submit_button: "button:has-text('Submit application')"
+      name: "input[name='name']"
+      email: "input[name='email']"
+      phone: "input[name='phone']"
+      linkedin: "input[name='linkedinUrl']"
+    delays:
+      page_load: 2.0
+      typing: 0.07
+      between_fields: 0.35
+      pre_submit_pause: 2.0
+
+  workday:
+    login_url: null  # Varies per company — use generic form detection
+    application_url_template: null
+    selectors: {}  # Vision-language parsing; no reliable static selectors
+    delays:
+      page_load: 3.0
+      typing: 0.09
+      between_fields: 0.5
+      pre_submit_pause: 2.5
+
+  linkedin:
+    login_url: "https://www.linkedin.com/login"
+    application_url_template: "https://www.linkedin.com/jobs/view/{job_id}/"
+    selectors:
+      easy_apply_button: "button[data-control-name='jobdetails_easyapply']"
+      submit_button: "button[aria-label='Submit application']"
+      next_button: "button[aria-label='Next']"
+      review_button: "button[aria-label='Review']"
+    delays:
+      page_load: 2.0
+      typing: 0.06
+      between_fields: 0.3
+      pre_submit_pause: 1.5
+
+  indeed:
+    login_url: "https://secure.indeed.com/auth"
+    application_url_template: "https://www.indeed.com/viewjob?jk={job_id}"
+    selectors:
+      apply_button: "button[data-tn-component='applyButton']"
+      resume_upload: "input[type='file'][accept*='pdf']"
+      submit_button: "button[type='submit']:has-text('Apply')"
+    delays:
+      page_load: 2.5
+      typing: 0.07
+      between_fields: 0.4
+      pre_submit_pause: 2.0
+
+# ── Browser Defaults ────────────────────────────────────────────────────────
+
+browser:
+  headless: true
+  viewport_width: 1920
+  viewport_height: 1080
+  locale: "en-US"
+  slow_mo_ms: 50
+  navigation_timeout_seconds: 30
+  # proxy: "http://user:pass@host:port"   # Uncomment for residential proxy
+
+# ── Deduplication ────────────────────────────────────────────────────────────
+
+deduplication:
+  window_hours: 72
+  match_keys:
+    - company
+    - title
+  fuzzy_match: false  # Set true to allow minor title variations
+
+# ── Cache ────────────────────────────────────────────────────────────────────
+
+cache:
+  listing_ttl_hours: 24
+  profile_ttl_hours: 1
+  search_ttl_minutes: 30
+
+# ── Tailoring Defaults ───────────────────────────────────────────────────────
+
+tailoring:
+  resume_format: "hybrid"  # chronological, hybrid, functional
+  max_resume_length_chars: 10000
+  max_cover_letter_length_chars: 3000
+  include_skills_section: true
+  include_summary: true
+  anti_ai_threshold: 0.3  # 0.0–1.0; above this triggers rewriting
+  truth_validation: strict  # strict, warn, off
+
+# ── Outreach Defaults ───────────────────────────────────────────────────────
+
+outreach:
+  max_messages_per_day: 10
+  platforms:
+    - email
+    - linkedin
+  message_templates:
+    follow_up_days: 7
+    max_follow_ups: 2
+
+# ── Monitoring ──────────────────────────────────────────────────────────────
+
+monitoring:
+  sentry_dsn: ""  # Set via environment
+  prometheus_enabled: false
+  prometheus_port: 9090

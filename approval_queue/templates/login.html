@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}GetAJob — Sign In{% endblock %}
+
+{% block content %}
+<div class="login-container" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
+    <div class="login-card" style="background: var(--color-surface); padding: 2.5rem; border-radius: var(--radius-xl); border: 1px solid var(--color-border); min-width: 380px; max-width: 420px;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 class="logo" style="font-size: 2rem; margin-bottom: 0.25rem;">GetAJob</h1>
+            <p style="color: var(--color-text-dim); font-size: 0.9rem;">Approval Queue — Sign In</p>
+        </div>
+
+        {% if error %}
+        <div class="toast toast-error" style="position: static; margin-bottom: 1rem; animation: none;">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="/login">
+            <div style="margin-bottom: 1.25rem;">
+                <label for="password" class="filter-label" style="margin-bottom: 0.4rem; display: block;">Password</label>
+                <input id="password" name="password" type="password" class="filter-input"
+                       style="width: 100%; padding: 0.75rem; font-size: 1rem;"
+                       placeholder="Enter password" autofocus required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-large" style="width: 100%; justify-content: center;">
+                Sign In
+            </button>
+        </form>
+
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: var(--color-text-muted);">
+            Local single-user mode — any password works in development.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Remove sidebar on login page.
+    document.getElementById('sidebar').style.display = 'none';
+    document.querySelector('.main-content').style.marginLeft = '0';
+</script>
+{% endblock %}

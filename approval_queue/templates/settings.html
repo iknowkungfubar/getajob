@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}GetAJob — Settings{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Settings</h2>
+</div>
+
+<div style="display: grid; gap: 1.5rem; max-width: 640px;">
+    <!-- Platform config -->
+    <div class="review-panel">
+        <div class="review-panel-header">⚙️ Platform Configuration</div>
+        <div class="review-panel-body" id="settings-content">
+            <div class="loading-spinner">Loading settings...</div>
+        </div>
+    </div>
+
+    <!-- Daily stats -->
+    <div class="review-panel">
+        <div class="review-panel-header">📊 Daily Activity</div>
+        <div class="review-panel-body" id="daily-stats">
+            <div class="loading-spinner">Loading...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Load config.
+        try {
+            const configResp = await fetch('/api/config');
+            const config = await configResp.json();
+            document.getElementById('settings-content').innerHTML = `
+                <div class="job-detail-grid">
+                    <span class="job-detail-label">Environment</span>
+                    <span class="job-detail-value"><span class="status-badge" style="background: var(--color-primary-dim); color: var(--color-primary);">${escapeHtml(config.environment)}</span></span>
+
+                    <span class="job-detail-label">Daily Application Cap</span>
+                    <span class="job-detail-value">${config.max_applications_per_day ?? '—'}</span>
+
+                    <span class="job-detail-label">Session</span>
+                    <span class="job-detail-value">Single-user, cookie-based</span>
+
+                    <span class="job-detail-label">Version</span>
+                    <span class="job-detail-value">0.1.0</span>
+                </div>
+            `;
+        } catch (err) {
+            document.getElementById('settings-content').innerHTML = '<p style="color: var(--color-error)">Failed to load settings.</p>';
+        }
+
+        // Load daily stats.
+        try {
+            const statsResp = await fetch('/api/stats');
+            const stats = await statsResp.json();
+            document.getElementById('daily-stats').innerHTML = `
+                <div class="job-detail-grid">
+                    <span class="job-detail-label">Pending Review</span>
+                    <span class="job-detail-value">${stats.pending_review ?? 0}</span>
+
+                    <span class="job-detail-label">Approved Today</span>
+                    <span class="job-detail-value">${stats.approved_today ?? 0}</span>
+
+                    <span class="job-detail-label">Submitted Today</span>
+                    <span class="job-detail-value">${stats.submitted_today ?? 0}</span>
+
+                    <span class="job-detail-label">Total Applications</span>
+                    <span class="job-detail-value">${stats.total ?? 0}</span>
+
+                    <span class="job-detail-label">Failed</span>
+                    <span class="job-detail-value">${stats.failed ?? 0}</span>
+                </div>
+            `;
+        } catch (err) {
+            document.getElementById('daily-stats').innerHTML = '<p style="color: var(--color-error)">Failed to load stats.</p>';
+        }
+    });
+</script>
+{% endblock %}

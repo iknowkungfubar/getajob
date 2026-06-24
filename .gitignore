@@ -1,0 +1,102 @@
+# Agentic / AI artifacts (never commit — project instructions for LLMs)
+CLAUDE.md
+.claude/
+.claude.json
+._claude/
+.cursorrules
+.cursor/
+
+# Secrets and credentials
+.env
+.env.*
+!env.template
+*.key
+*.pem
+*.p12
+*.cert
+credentials.json
+client_secret*.json
+service_account*.json
+
+# Browser profiles and cookies
+browser_profiles/
+browser_data/
+cookies/
+*.cookie
+cookies.pkl
+
+# Data and runtime
+data/applications.db
+data/jobs.db
+data/profiles/
+data/vector_store/
+data/chroma/
+data/qdrant/
+*.sqlite3
+*.sqlite
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.venv
+venv
+env/
+.venv*/
+venv*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+error_dumps/
+
+# Config with secrets
+config/credentials.yaml
+config/providers.yaml
+config/secrets.yaml
+
+# Testing artifacts
+test_results/
+.htmlcov/
+.coverage
+coverage/
+.coverage.*
+coverage.xml
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS artifacts
+Thumbs.db
+Desktop.ini
+
+# Hermes Agent artifacts
+hermes_skills/
+hermes_memories/
+
+# Docker
+.docker/
+
+# Reports
+reports/
+profiling/
