@@ -143,7 +143,7 @@ class TestParseResponse:
 
     def test_fallback_subject_when_missing(self) -> None:
         response = "Just a body without a subject line"
-        subject, body = MessageGenerator._parse_response(response)
+        subject, _body = MessageGenerator._parse_response(response)
         assert subject == "Application Follow-Up"
 
 

@@ -210,13 +210,12 @@ class ExperienceParser:
 
         # Lexicon-based extraction (longest match first — patterns pre-compiled).
         for pattern, skill_name, category in _SKILL_PATTERNS:
-            if pattern.search(text_lower):
-                if skill_name not in found:
-                    found[skill_name] = SkillSchema(
-                        name=skill_name.title(),
-                        category=category,
-                        proficiency=None,
-                    )
+            if pattern.search(text_lower) and skill_name not in found:
+                found[skill_name] = SkillSchema(
+                    name=skill_name.title(),
+                    category=category,
+                    proficiency=None,
+                )
 
         # LLM-based extraction for skills outside the lexicon.
         if use_llm and self._llm is not None and len(text) > 20:

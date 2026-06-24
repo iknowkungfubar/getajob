@@ -171,7 +171,7 @@ class AntiAIDetector:
 
         # Run all analyses and collect scores.
         blocklist_score, flagged, suggestions = self._scan_blocklist(text)
-        sent_std, sent_warnings = self._analyse_sentence_length(text)
+        sent_std, _sent_warnings = self._analyse_sentence_length(text)
         vocab_score = self._vocabulary_richness(text)
         format_warnings = self._analyse_format(text)
 

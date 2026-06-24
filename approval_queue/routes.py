@@ -462,7 +462,8 @@ async def get_config(_request: Request) -> dict[str, Any]:
 async def _fetch_stats(db: AsyncSession | None) -> dict[str, Any]:
     """Query aggregate statistics from the database.
 
-    Falls back to mock data when *db* is ``None``.
+    Falls back to mock data when *db* is ``None`` or the tables do not
+    exist yet (e.g. before ``getajob setup`` has been run).
     """
     if db is None:
         return _mock_stats()
@@ -471,19 +472,24 @@ async def _fetch_stats(db: AsyncSession | None) -> dict[str, Any]:
         hour=0, minute=0, second=0, microsecond=0
     )
 
-    # Count per state.
-    rows = await db.execute(
-        select(Application.state, func.count(Application.id)).group_by(Application.state)
-    )
-    state_counts: dict[str, int] = {str(state): count for state, count in rows}
+    try:
+        # Count per state.
+        rows = await db.execute(
+            select(Application.state, func.count(Application.id)).group_by(Application.state)
+        )
+        state_counts: dict[str, int] = {str(state): count for state, count in rows}
 
-    # Counts for today.
-    today_rows = await db.execute(
-        select(Application.state, func.count(Application.id))
-        .where(Application.created_at >= today_start)
-        .group_by(Application.state)
-    )
-    today_state_counts: dict[str, int] = {str(state): count for state, count in today_rows}
+        # Counts for today.
+        today_rows = await db.execute(
+            select(Application.state, func.count(Application.id))
+            .where(Application.created_at >= today_start)
+            .group_by(Application.state)
+        )
+        today_state_counts: dict[str, int] = {str(state): count for state, count in today_rows}
+    except Exception:
+        # Tables may not exist yet (OperationalError). Return empty stats.
+        state_counts = {}
+        today_state_counts = {}
 
     total = sum(state_counts.values())
 
@@ -512,7 +518,7 @@ async def _fetch_applications(
     """Query a paginated list of applications.
 
     Joins with ``job_listings`` to include company and title.  Falls back
-    to mock data when *db* is ``None``.
+    to mock data when *db* is ``None`` or tables do not exist yet.
     """
     if db is None:
         return _mock_applications(state_filter, limit, offset)
@@ -526,34 +532,44 @@ async def _fetch_applications(
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid state: {state_filter!r}") from None
 
-    # Total count.
-    count_result = await db.execute(
-        select(func.count(Application.id)).where(*conditions)
-    )
-    total = count_result.scalar() or 0
+    try:
+        # Total count.
+        count_result = await db.execute(
+            select(func.count(Application.id)).where(*conditions)
+        )
+        total = count_result.scalar() or 0
 
-    # Fetch rows with joined job listing.
-    query = (
-        select(Application)
-        .options(selectinload(Application.job_listing))
-        .where(*conditions)
-        .order_by(Application.updated_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
-    rows = await db.execute(query)
-    applications = rows.unique().scalars().all()
+        # Fetch rows with joined job listing.
+        query = (
+            select(Application)
+            .options(selectinload(Application.job_listing))
+            .where(*conditions)
+            .order_by(Application.updated_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = await db.execute(query)
+        applications = rows.unique().scalars().all()
 
-    page = (offset // limit) + 1 if limit > 0 else 1
-    total_pages = max(1, (total + limit - 1) // limit) if limit > 0 else 1
+        page = (offset // limit) + 1 if limit > 0 else 1
+        total_pages = max(1, (total + limit - 1) // limit) if limit > 0 else 1
 
-    return {
-        "items": [_application_to_dict(a, include_details=False) for a in applications],
-        "total": total,
-        "page": page,
-        "page_size": limit,
-        "total_pages": total_pages,
-    }
+        return {
+            "items": [_application_to_dict(a, include_details=False) for a in applications],
+            "total": total,
+            "page": page,
+            "page_size": limit,
+            "total_pages": total_pages,
+        }
+    except Exception:
+        # Tables may not exist yet. Return empty list.
+        return {
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "page_size": limit,
+            "total_pages": 1,
+        }
 
 
 async def _fetch_application_detail(

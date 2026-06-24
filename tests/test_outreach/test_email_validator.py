@@ -87,7 +87,7 @@ class TestDeliverability:
         assert result.overall_score >= 0.2
 
     def test_role_based_detection(self) -> None:
-        validator = EmailValidator(check_role_based=True)
+        EmailValidator(check_role_based=True)
         result = DeliverabilityResult(
             format_valid=True,
             is_role_based=True,
@@ -97,7 +97,7 @@ class TestDeliverability:
         assert result.is_role_based is True
 
     def test_disposable_detection(self) -> None:
-        validator = EmailValidator(check_disposable=True)
+        EmailValidator(check_disposable=True)
         result = DeliverabilityResult(
             format_valid=True,
             is_disposable=True,
@@ -115,7 +115,7 @@ class TestDisposableDomains:
         assert validator._check_disposable is True
 
     def test_role_based_prefix_flagged(self) -> None:
-        validator = EmailValidator()
+        EmailValidator()
         from outreach_engine.email_validator import _ROLE_BASED_PREFIXES
 
         assert "info" in _ROLE_BASED_PREFIXES

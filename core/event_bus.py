@@ -8,6 +8,7 @@ implementation for development and testing.  Both expose the same
 from __future__ import annotations as _annotations
 
 import asyncio
+import contextlib
 import enum
 import json
 import uuid
@@ -203,10 +204,8 @@ class RedisEventBus:
         self._started = False
         if self._listener_task is not None:
             self._listener_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._listener_task
-            except asyncio.CancelledError:
-                pass
 
         if self._pub is not None:
             await self._pub.aclose()

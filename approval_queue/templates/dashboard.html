@@ -263,6 +263,6 @@
 <script>
     // Initialise dashboard state from server-rendered data.
     var currentPage = {{ pagination.page if pagination else 1 }};
-    var currentState = '{{ request.url.query_params.state or "" }}';
+    var currentState = '{{ request.query_params.get("state", "") }}';
 </script>
 {% endblock %}

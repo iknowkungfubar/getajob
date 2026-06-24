@@ -8,6 +8,7 @@ multi-step modal within the job listing page.
 
 from __future__ import annotations as _annotations
 
+import contextlib
 from typing import Any
 
 import structlog
@@ -295,10 +296,8 @@ class IndeedFormHandler:
             if btn is not None:
                 await human.click_element(page, btn)
                 await human.sleep_between_actions()
-                try:
+                with contextlib.suppress(Exception):
                     await page.wait_for_load_state("networkidle", timeout=8_000)
-                except Exception:
-                    pass
                 return
 
     async def _emit(self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int) -> None:

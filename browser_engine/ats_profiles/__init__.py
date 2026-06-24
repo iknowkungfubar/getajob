@@ -29,7 +29,7 @@ __all__: list[str] = [
 # ── ATS Enum ────────────────────────────────────────────────────────────────────────
 
 
-class ATSProfile(str, enum.Enum):
+class ATSProfile(enum.StrEnum):
     """Well-known Applicant Tracking System types that we can detect and handle."""
 
     WORKDAY = "workday"

@@ -10,46 +10,46 @@ from __future__ import annotations as _annotations
 import datetime
 import uuid
 from collections.abc import Sequence
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.state_machine import ApplicationState
 
 __all__: list[str] = [
-    # Generic
-    "PaginatedResponse",
+    "ATSProfileConfig",
+    # Application
+    "ApplicationCreate",
+    "ApplicationEventRead",
+    "ApplicationRead",
+    "ApplicationStateUpdate",
+    # Browser
+    "BrowserSubmissionRequest",
+    "BrowserSubmissionResponse",
     "ErrorResponse",
     # Job listing
     "JobListingCreate",
     "JobListingRead",
     "JobListingUpdate",
-    # Profile
-    "SkillSchema",
-    "WorkExperienceSchema",
+    "OutreachMessageSchema",
+    # Generic
+    "PaginatedResponse",
     "ProfileCreate",
     "ProfileRead",
     "ProfileUpdate",
-    # Work experience (standalone)
-    "WorkExperienceCreate",
-    "WorkExperienceRead",
-    # Application
-    "ApplicationCreate",
-    "ApplicationRead",
-    "ApplicationStateUpdate",
-    "ApplicationEventRead",
+    # Outreach
+    "RecruiterInfoSchema",
+    # Config
+    "SearchVectorConfig",
+    # Profile
+    "SkillSchema",
     # Tailoring
     "TailoringRequest",
     "TailoringResponse",
-    # Browser
-    "BrowserSubmissionRequest",
-    "BrowserSubmissionResponse",
-    # Outreach
-    "RecruiterInfoSchema",
-    "OutreachMessageSchema",
-    # Config
-    "SearchVectorConfig",
-    "ATSProfileConfig",
+    # Work experience (standalone)
+    "WorkExperienceCreate",
+    "WorkExperienceRead",
+    "WorkExperienceSchema",
 ]
 
 _T = TypeVar("_T")
@@ -58,7 +58,7 @@ _T = TypeVar("_T")
 # ── Generic containers ───────────────────────────────────────────────────────────
 
 
-class PaginatedResponse(BaseModel, Generic[_T]):
+class PaginatedResponse[T](BaseModel):
     """Generic wrapper for paginated API responses."""
 
     items: Sequence[_T]

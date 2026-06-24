@@ -19,6 +19,7 @@ Key behaviours:
 from __future__ import annotations as _annotations
 
 import asyncio
+import contextlib
 import datetime
 import re
 import time
@@ -816,15 +817,11 @@ def _extract_salary(raw_job: dict[str, Any]) -> dict[str, Any] | None:
         if min_val is not None or max_val is not None:
             result: dict[str, Any] = {"currency": currency or "USD"}
             if min_val is not None:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     result["min"] = int(float(str(min_val).replace(",", "").replace("$", "")))
-                except (ValueError, TypeError):
-                    pass
             if max_val is not None:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     result["max"] = int(float(str(max_val).replace(",", "").replace("$", "")))
-                except (ValueError, TypeError):
-                    pass
             return result if ("min" in result or "max" in result) else None
 
     if isinstance(salary, str):

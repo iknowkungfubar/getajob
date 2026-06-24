@@ -147,7 +147,7 @@ class LinkedInFormHandler:
             max_steps = 20  # Safety limit.
             current_step = 1
 
-            for step_idx in range(max_steps):
+            for _step_idx in range(max_steps):
                 # Determine if we're on the review page or a field page.
                 review_btn = await page.query_selector(_LINKEDIN_SELECTORS["review_button"])
                 submit_btn = await page.query_selector(_LINKEDIN_SELECTORS["submit_button"])

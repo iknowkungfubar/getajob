@@ -432,7 +432,7 @@ async def dynamic_select(page: Page, field_hint: str, *, context: str | None = N
 
     # Fallback: scan all input/textarea elements and check nearby text.
     inputs = await page.query_selector_all("input:not([type='hidden']):not([type='submit']), textarea, select")
-    all_text = await page.inner_text("body")
+    await page.inner_text("body")
 
     # If no label match succeeded, return the first input whose placeholder
     # or aria-label matches.

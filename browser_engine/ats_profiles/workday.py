@@ -8,6 +8,7 @@ step, using both standard selectors and Workday-specific DOM patterns.
 
 from __future__ import annotations as _annotations
 
+import contextlib
 import re
 from typing import Any
 
@@ -397,10 +398,8 @@ class WorkdayFormHandler:
             if btn is not None:
                 await human.click_element(page, btn)
                 await human.sleep_between_actions()
-                try:
+                with contextlib.suppress(Exception):
                     await page.wait_for_load_state("networkidle", timeout=10_000)
-                except Exception:
-                    pass
                 return
 
     async def _fill_visible_fields(self, page: Page, human: HumanSimulator, fields: dict[str, str]) -> None:

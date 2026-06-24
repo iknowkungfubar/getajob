@@ -6,7 +6,7 @@ convenience access to the orchestrator and CLI runner.
 
 from __future__ import annotations as _annotations
 
-__version__ = "0.1.0"
+__version__ = "0.4.0"
 __all__: list[str] = [
     "__version__",
     "run_pipeline",
@@ -43,7 +43,7 @@ async def run_pipeline(
     _ = discover  # orchestrator.run_once always includes discovery
     _ = tailor  # orchestrator.run_once always includes context analysis
 
-    settings = get_settings()
+    get_settings()
     engine = create_engine()
     event_bus = InMemoryEventBus()
     llm_client = get_llm_client()

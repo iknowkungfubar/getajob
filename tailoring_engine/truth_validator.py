@@ -168,7 +168,6 @@ class TruthValidator:
         """
         companies: set[str] = set()
         titles: set[str] = set()
-        date_ranges: list[tuple[str, str | None, str | None]] = []
         skills: set[str] = set()
 
         # Work experiences.

@@ -188,7 +188,7 @@ class GenericFormHandler:
         try:
             # Capture screenshot as base64.
             screenshot_bytes = await page.screenshot(full_page=True)
-            screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
+            base64.b64encode(screenshot_bytes).decode("utf-8")
 
             prompt = (
                 "You are analysing a job application form from a screenshot. "

@@ -55,21 +55,21 @@ from browser_engine.selectors import KNOWN_FIELD_TYPES, SelectorRegistry, Select
 from browser_engine.stealth_browser import STEALTH_INIT_SCRIPT, StealthBrowser
 
 __all__: list[str] = [
-    # Core classes
-    "StealthBrowser",
-    "HumanSimulator",
-    "FormFiller",
+    "KNOWN_FIELD_TYPES",
+    # Constants
+    "STEALTH_INIT_SCRIPT",
     "ATSDetector",
-    "SelectorRegistry",
     # Data types
     "ATSProfile",
     "DetectionResult",
-    "FormFillingResult",
+    "FormFiller",
     "FormFillingProgress",
+    "FormFillingResult",
+    "HumanSimulator",
+    "SelectorRegistry",
     "SelectorStrategy",
-    # Constants
-    "STEALTH_INIT_SCRIPT",
-    "KNOWN_FIELD_TYPES",
+    # Core classes
+    "StealthBrowser",
     # Utilities
     "get_handler_for_profile",
 ]

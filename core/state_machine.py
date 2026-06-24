@@ -22,7 +22,7 @@ __all__: list[str] = [
 logger = structlog.get_logger(__name__)
 
 
-class ApplicationState(str, enum.Enum):
+class ApplicationState(enum.StrEnum):
     """All possible states in the application lifecycle.
 
     The lifecycle is:
