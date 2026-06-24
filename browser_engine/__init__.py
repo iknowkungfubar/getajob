@@ -42,13 +42,13 @@ Typical usage::
 
 from __future__ import annotations as _annotations
 
+from browser_engine.ats_detector import ATSDetector, DetectionResult
 from browser_engine.ats_profiles import (
     ATSProfile,
     FormFillingProgress,
     FormFillingResult,
     get_handler_for_profile,
 )
-from browser_engine.ats_detector import ATSDetector, DetectionResult
 from browser_engine.form_filler import FormFiller
 from browser_engine.human_simulator import HumanSimulator
 from browser_engine.selectors import KNOWN_FIELD_TYPES, SelectorRegistry, SelectorStrategy

@@ -8,15 +8,15 @@ implementation details.
 from __future__ import annotations as _annotations
 
 __all__: list[str] = [
-    "GetAJobError",
-    "ConfigurationError",
-    "ProfileError",
-    "IngestionError",
-    "TailoringError",
     "BrowserError",
+    "ConfigurationError",
+    "GetAJobError",
+    "IngestionError",
     "OutreachError",
-    "StateMachineError",
+    "ProfileError",
     "SecurityError",
+    "StateMachineError",
+    "TailoringError",
 ]
 
 

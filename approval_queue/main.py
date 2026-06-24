@@ -232,9 +232,13 @@ async def login(request: Request) -> Response:
         )
         return response
 
-    # Production: check against configured password.
-    # Priority: dedicated env var > database password > fail closed.
-    expected = os.environ.get("GETAJOB_APPROVAL_PASSWORD") or settings.database.password or ""
+    # Production: check against dedicated approval password.
+    # Priority: env var > config file > fail closed.
+    expected = (
+        os.environ.get("GETAJOB_APPROVAL_PASSWORD")
+        or settings.security.approval_password
+        or ""
+    )
 
     if password == expected:
         token = getattr(request.app.state, "session_token", None)

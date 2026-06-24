@@ -119,6 +119,13 @@ _KNOWN_SKILLS: dict[str, str] = {
     "ci": "concept",
 }
 
+# ── Pre-compiled skill patterns ──────────────────────────────────────────────────
+
+_SKILL_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
+    (re.compile(r"\b" + re.escape(s) + r"\b", re.IGNORECASE), s, _KNOWN_SKILLS[s])
+    for s in sorted(_KNOWN_SKILLS, key=len, reverse=True)
+]
+
 # ── Date patterns ────────────────────────────────────────────────────────────────
 
 _DATE_PATTERNS = [
@@ -201,14 +208,13 @@ class ExperienceParser:
         text_lower = text.lower()
         found: dict[str, SkillSchema] = {}
 
-        # Lexicon-based extraction (longest match first to avoid prefix overlap).
-        for skill_name in sorted(_KNOWN_SKILLS, key=len, reverse=True):
-            pattern = re.compile(r"\b" + re.escape(skill_name) + r"\b", re.IGNORECASE)
+        # Lexicon-based extraction (longest match first — patterns pre-compiled).
+        for pattern, skill_name, category in _SKILL_PATTERNS:
             if pattern.search(text_lower):
                 if skill_name not in found:
                     found[skill_name] = SkillSchema(
                         name=skill_name.title(),
-                        category=_KNOWN_SKILLS[skill_name],
+                        category=category,
                         proficiency=None,
                     )
 

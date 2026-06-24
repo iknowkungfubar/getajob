@@ -11,7 +11,7 @@ import asyncio
 import enum
 import json
 import uuid
-from collections.abc import AsyncIterator, Callable, Coroutine
+from collections.abc import Callable, Coroutine
 from typing import Any, Protocol
 
 import structlog
@@ -19,11 +19,11 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 __all__: list[str] = [
-    "EventPriority",
     "EventBus",
+    "EventHandler",
+    "EventPriority",
     "InMemoryEventBus",
     "RedisEventBus",
-    "EventHandler",
 ]
 
 # ── Priorities ───────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ EventHandler = Callable[["Event"], Coroutine[Any, Any, None]]
 class Event:
     """Lightweight event envelope carried across the bus."""
 
-    __slots__ = ("id", "type", "data", "priority", "source")
+    __slots__ = ("data", "id", "priority", "source", "type")
 
     def __init__(
         self,
@@ -189,7 +189,7 @@ class RedisEventBus:
         self._started = False
 
     async def start(self) -> None:
-        import redis.asyncio as aioredis  # noqa: PLC0415
+        import redis.asyncio as aioredis
 
         self._pub = aioredis.from_url(self._redis_url, decode_responses=True)
         self._sub = aioredis.from_url(self._redis_url, decode_responses=True)

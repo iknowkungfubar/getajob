@@ -21,7 +21,7 @@ from typing import Any
 
 import structlog
 
-from core.config import get_settings, GetAJobSettings
+from core.config import GetAJobSettings, get_settings
 from core.event_bus import EventBus, EventPriority, InMemoryEventBus
 
 __all__: list[str] = [

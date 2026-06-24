@@ -8,15 +8,11 @@ standalone.
 
 from __future__ import annotations as _annotations
 
-from collections.abc import AsyncIterator
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import pytest_asyncio
 
 from outreach_engine.contact_finder import RecruiterInfo
-
 
 # ── LLM client fixture (lazy import to avoid core init side effects) ────────
 
@@ -29,7 +25,7 @@ def mock_llm_client() -> Any:
     event-listener setup.
     """
     # Lazy import to avoid triggering core.database event listeners.
-    from core.llm_client import MockLLMClient  # noqa: PLC0415
+    from core.llm_client import MockLLMClient
 
     return MockLLMClient(
         responses={

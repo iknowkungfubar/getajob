@@ -15,20 +15,16 @@ Key behaviours:
 
 from __future__ import annotations as _annotations
 
-import datetime
 import statistics
 from typing import Any
 
-import structlog
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from core.config import get_settings
+from agents.base import BaseAgent
 from core.database import create_engine
 from core.exceptions import TailoringError
 from core.llm_client import LLMClient, get_llm_client
-
-from agents.base import BaseAgent
 
 __all__: list[str] = [
     "ContextAgent",
@@ -164,7 +160,7 @@ class ContextAgent(BaseAgent):
     def _profile_store(self) -> Any:
         """Lazily initialised :class:`~profile_engine.profile_store.ProfileStore`."""
         if self._profile_store_val is None:
-            from profile_engine.profile_store import ProfileStore  # noqa: PLC0415
+            from profile_engine.profile_store import ProfileStore
             self._profile_store_val = ProfileStore(self._engine)
         return self._profile_store_val
 
@@ -406,7 +402,7 @@ class ContextAgent(BaseAgent):
             is a float 0.0–1.0 and *top_chunks* are the raw VectorStore results.
         """
         try:
-            from profile_engine.vector_store import VectorStore  # noqa: PLC0415
+            from profile_engine.vector_store import VectorStore
         except ImportError:
             self.logger.warning("VectorStore not available — skipping semantic search")
             return 0.0, []

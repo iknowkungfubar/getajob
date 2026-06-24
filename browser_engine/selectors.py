@@ -11,17 +11,14 @@ from __future__ import annotations as _annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
 
 import structlog
-from playwright.async_api import ElementHandle, Locator, Page
-
-from core.exceptions import BrowserError
+from playwright.async_api import ElementHandle, Page
 
 __all__: list[str] = [
-    "SelectorStrategy",
-    "SelectorRegistry",
     "KNOWN_FIELD_TYPES",
+    "SelectorRegistry",
+    "SelectorStrategy",
 ]
 
 logger = structlog.get_logger(__name__)

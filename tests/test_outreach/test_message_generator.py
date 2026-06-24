@@ -11,9 +11,13 @@ import uuid
 
 import pytest
 
-from core.schemas import JobListingRead, OutreachMessageSchema, ProfileRead, SkillSchema, WorkExperienceSchema
+from core.schemas import (
+    JobListingRead,
+    ProfileRead,
+    SkillSchema,
+    WorkExperienceSchema,
+)
 from outreach_engine.message_generator import MessageGenerator, OutreachMessage
-
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
 

@@ -9,10 +9,9 @@ from __future__ import annotations as _annotations
 
 import asyncio
 import json
-import time
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Iterable
-from typing import Any, Protocol
+from collections.abc import AsyncIterator
+from typing import Any
 
 import structlog
 
@@ -20,8 +19,8 @@ from core.config import get_settings
 from core.exceptions import ConfigurationError, TailoringError
 
 __all__: list[str] = [
-    "LLMClient",
     "ClaudeAPIClient",
+    "LLMClient",
     "MockLLMClient",
     "get_llm_client",
 ]
@@ -161,7 +160,7 @@ class ClaudeAPIClient(LLMClient):
         """Import and cache the Anthropic SDK client (lazy import)."""
         if self._client is None:
             try:
-                from anthropic import AsyncAnthropic  # noqa: PLC0415
+                from anthropic import AsyncAnthropic
             except ImportError as exc:
                 msg = "The ``anthropic`` package is required for ClaudeAPIClient"
                 raise ConfigurationError(msg) from exc

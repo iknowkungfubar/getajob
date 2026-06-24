@@ -22,8 +22,7 @@ from core.config import get_settings, load_config
 from core.exceptions import TailoringError
 from core.llm_client import LLMClient, get_llm_client
 from core.schemas import JobListingRead, ProfileRead
-
-from tailoring_engine.anti_ai_detector import AntiAIDetector, AnalysisResult
+from tailoring_engine.anti_ai_detector import AnalysisResult, AntiAIDetector
 
 __all__: list[str] = [
     "CoverLetterGenerator",

@@ -15,9 +15,9 @@ Usage::
 from __future__ import annotations as _annotations
 
 __all__: list[str] = [
-    "ResumeGenerator",
     "CoverLetterGenerator",
+    "ResumeGenerator",
 ]
 
-from tailoring_engine.resume_generator import ResumeGenerator
 from tailoring_engine.cover_letter_generator import CoverLetterGenerator
+from tailoring_engine.resume_generator import ResumeGenerator

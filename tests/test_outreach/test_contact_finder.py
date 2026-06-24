@@ -6,8 +6,6 @@ robots.txt integration, and rate-limiting behaviour.
 
 from __future__ import annotations as _annotations
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
 
 from outreach_engine.contact_finder import (

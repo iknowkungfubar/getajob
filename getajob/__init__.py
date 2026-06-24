@@ -9,8 +9,8 @@ from __future__ import annotations as _annotations
 __version__ = "0.1.0"
 __all__: list[str] = [
     "__version__",
-    "run_pipeline",
     "cli_app",
+    "run_pipeline",
 ]
 
 from getajob.cli import app as cli_app
@@ -37,11 +37,11 @@ async def run_pipeline(
     Returns:
         A dict with pipeline execution results.
     """
+    from agents.orchestrator_agent import OrchestratorAgent
     from core.config import get_settings
     from core.database import create_engine
     from core.event_bus import InMemoryEventBus
     from core.llm_client import get_llm_client
-    from agents.orchestrator_agent import OrchestratorAgent
 
     _ = discover  # orchestrator.run_once always includes discovery
     _ = tailor  # orchestrator.run_once always includes context analysis

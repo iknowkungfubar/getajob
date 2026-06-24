@@ -16,9 +16,8 @@ Usage::
 
 from __future__ import annotations as _annotations
 
-import os
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Any
 
 import structlog
 import yaml
@@ -29,8 +28,8 @@ from core.exceptions import ConfigurationError
 
 __all__: list[str] = [
     "GetAJobSettings",
-    "load_config",
     "get_settings",
+    "load_config",
 ]
 
 logger = structlog.get_logger(__name__)
@@ -104,6 +103,7 @@ class SecuritySettings(BaseSettings):
     encryption_key: str = Field(default="", description="AES-256-GCM key (hex-encoded, 64 hex chars = 32 bytes)")
     encryption_salt: str = Field(default="", description="PBKDF2 salt (hex-encoded, 32 hex chars = 16 bytes)")
     tokenizer_salt: str = Field(default="", description="PII tokenizer salt (hex-encoded, 32 hex chars = 16 bytes)")
+    approval_password: str = Field(default="", description="HITL approval queue web UI password (separate from DB password)")
 
 
 class BrowserSettings(BaseSettings):
@@ -217,7 +217,7 @@ class GetAJobSettings(BaseSettings):
     # ── Validators ───────────────────────────────────────────────────────────
 
     @model_validator(mode="after")
-    def _warn_if_insecure_defaults(self) -> "GetAJobSettings":
+    def _warn_if_insecure_defaults(self) -> GetAJobSettings:
         """Emit a warning when critical settings use default values."""
         if not self.security.encryption_key:
             logger.warning(
@@ -291,5 +291,5 @@ def get_settings() -> GetAJobSettings:
         # model_config has an `env_file` directive — we set it here so the
         # .env path is resolved relative to the project root.
         env_path = _PROJECT_ROOT / ".env"
-        _settings = GetAJobSettings(_env_file=str(env_path) if env_path.exists() else None)  # type: ignore[call-arg]  # noqa: PGH003
+        _settings = GetAJobSettings(_env_file=str(env_path) if env_path.exists() else None)  # type: ignore[call-arg]
     return _settings

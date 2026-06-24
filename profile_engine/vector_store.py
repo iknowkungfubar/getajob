@@ -65,7 +65,7 @@ class VectorStore:
         This must be called before any read/write operations.
         """
         try:
-            import chromadb  # noqa: PLC0415
+            import chromadb
         except ImportError as exc:
             msg = (
                 "The ``chromadb`` package is required for the vector store. "

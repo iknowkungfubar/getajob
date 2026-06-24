@@ -14,8 +14,8 @@ import structlog
 from core.exceptions import StateMachineError
 
 __all__: list[str] = [
-    "ApplicationState",
     "ALLOWED_TRANSITIONS",
+    "ApplicationState",
     "transition_state",
 ]
 

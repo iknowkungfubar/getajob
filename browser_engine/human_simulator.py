@@ -9,11 +9,9 @@ a genuine user.
 from __future__ import annotations as _annotations
 
 import asyncio
-import math
 import random
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
 
 import structlog
 from playwright.async_api import ElementHandle, Locator, Page

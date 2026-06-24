@@ -25,26 +25,23 @@ import sys
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
-from typing import Annotated, Optional
 
 import structlog
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.progress import (
     Progress,
     SpinnerColumn,
     TextColumn,
-    TimeElapsedColumn,
 )
+from rich.table import Table
 
+from agents.orchestrator_agent import OrchestratorAgent
 from core.config import get_settings
 from core.database import create_engine, run_migrations
 from core.event_bus import InMemoryEventBus
 from core.llm_client import get_llm_client
-
-from agents.orchestrator_agent import OrchestratorAgent
 
 __all__: list[str] = [
     "app",
@@ -83,7 +80,7 @@ def _version_callback(value: bool) -> None:
 
 @app.callback()
 def _main(
-    version: bool = typer.Option(  # noqa: FBT001
+    version: bool = typer.Option(
         False,
         "--version",
         "-V",
@@ -99,7 +96,7 @@ def _main(
 @app.command()
 def discover(
     ctx: typer.Context,
-    continuous: bool = typer.Option(  # noqa: FBT001
+    continuous: bool = typer.Option(
         False,
         "--continuous",
         "-c",
@@ -186,9 +183,10 @@ def tailor(
     _check_settings()
 
     async def _run() -> None:
-        from core.models import JobListing
         from sqlalchemy import select
+
         from core.database import get_session
+        from core.models import JobListing
 
         engine = create_engine()
         event_bus = InMemoryEventBus()
@@ -294,7 +292,7 @@ def tailor(
 @app.command()
 def run(
     ctx: typer.Context,
-    continuous: bool = typer.Option(  # noqa: FBT001
+    continuous: bool = typer.Option(
         False,
         "--continuous",
         "-c",
@@ -390,7 +388,7 @@ def serve(
     console.print(f"\n  Starting server at [bold]http://{host}:{port}[/]\n")
 
     settings = get_settings()
-    import uvicorn  # noqa: PLC0415
+    import uvicorn
 
     uvicorn.run(
         "approval_queue.main:app",
@@ -404,7 +402,7 @@ def serve(
 
 @app.command()
 def setup(
-    drop_first: bool = typer.Option(  # noqa: FBT001
+    drop_first: bool = typer.Option(
         False,
         "--drop-first",
         help="Drop existing tables before creating (destructive!).",
@@ -452,8 +450,8 @@ def setup(
                 if env_template.exists():
                     console.print(
                         "  [yellow]⚠[/] No .env file found. "
-                        f"Copy env.template to .env and configure it:\n"
-                        f"       cp env.template .env"
+                        "Copy env.template to .env and configure it:\n"
+                        "       cp env.template .env"
                     )
                 else:
                     console.print(
@@ -466,10 +464,10 @@ def setup(
             console.print(
                 Panel(
                     "[green]✓[/] Setup complete!\n\n"
-                    f"  [bold]Next steps:[/]\n"
-                    f"  1. Configure [cyan].env[/] with your API keys\n"
-                    f"  2. Run [cyan]getajob run[/] to start discovering jobs\n"
-                    f"  3. Run [cyan]getajob serve[/] to open the approval queue\n",
+                    "  [bold]Next steps:[/]\n"
+                    "  1. Configure [cyan].env[/] with your API keys\n"
+                    "  2. Run [cyan]getajob run[/] to start discovering jobs\n"
+                    "  3. Run [cyan]getajob serve[/] to open the approval queue\n",
                     border_style="green",
                     title="Setup Complete",
                 )

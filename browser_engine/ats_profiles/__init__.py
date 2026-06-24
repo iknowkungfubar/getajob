@@ -18,12 +18,12 @@ from playwright.async_api import Page as PlaywrightPage
 from core.schemas import ProfileCreate
 
 __all__: list[str] = [
-    "ATSProfile",
+    "PROFILE_HANDLER_REGISTRY",
     "ATSFormHandler",
+    "ATSProfile",
     "FormFillingProgress",
     "FormFillingResult",
     "get_handler_for_profile",
-    "PROFILE_HANDLER_REGISTRY",
 ]
 
 # ── ATS Enum ────────────────────────────────────────────────────────────────────────

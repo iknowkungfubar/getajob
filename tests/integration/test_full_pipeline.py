@@ -18,10 +18,9 @@ from __future__ import annotations as _annotations
 #
 # The ORM models use PostgreSQL-specific types (UUID, JSONB).  These custom
 # `@compiles` directives tell SQLAlchemy how to render them against SQLite.
-
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 
 @compiles(UUID, "sqlite")
@@ -49,13 +48,12 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from core.database import Base
-from core.event_bus import Event, EventPriority, InMemoryEventBus
-from core.models import Application, ApplicationEvent, JobListing, UserProfile, WorkExperience
-from core.state_machine import ApplicationState
-from core.llm_client import MockLLMClient
-
 from agents.orchestrator_agent import OrchestratorAgent
+from core.database import Base
+from core.event_bus import EventPriority, InMemoryEventBus
+from core.llm_client import MockLLMClient
+from core.models import Application, JobListing, UserProfile, WorkExperience
+from core.state_machine import ApplicationState
 
 __all__: list[str] = []
 
@@ -362,8 +360,9 @@ class TestFullPipeline:
             )
 
             # ── Step 5: Assert database records ──────────────────────────
-            from core.database import get_session
             from sqlalchemy import select
+
+            from core.database import get_session
 
             async with get_session(db_engine) as session:
                 app_query = select(Application).where(
@@ -432,8 +431,9 @@ class TestFullPipeline:
             )
 
             # Verify no Application record was created.
-            from core.database import get_session
             from sqlalchemy import select
+
+            from core.database import get_session
 
             async with get_session(db_engine) as session:
                 app_query = select(Application).where(
@@ -574,7 +574,7 @@ class TestFullPipeline:
         mock_llm: MockLLMClient,
     ) -> None:
         """Verify that the state machine rejects invalid transitions."""
-        from core.state_machine import transition_state, StateMachineError
+        from core.state_machine import StateMachineError, transition_state
 
         # DISCOVERED → SUBMITTED is not allowed.
         with pytest.raises(StateMachineError, match="Cannot transition"):

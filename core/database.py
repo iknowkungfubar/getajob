@@ -18,12 +18,14 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any
 
 import structlog
-from sqlalchemy import MetaData, event, Engine
+from sqlalchemy import MetaData, event
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
+)
+from sqlalchemy.ext.asyncio import (
     create_async_engine as _create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
@@ -35,8 +37,8 @@ from core.exceptions import ConfigurationError
 __all__: list[str] = [
     "Base",
     "create_engine",
-    "get_session",
     "get_connection",
+    "get_session",
     "run_migrations",
 ]
 

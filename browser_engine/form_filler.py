@@ -17,19 +17,17 @@ from __future__ import annotations as _annotations
 
 import os
 from collections.abc import Callable, Coroutine
-from pathlib import Path
 from typing import Any
 
 import structlog
-from playwright.async_api import ElementHandle, Locator, Page
+from playwright.async_api import Page
 
 from browser_engine.ats_detector import ATSDetector
 from browser_engine.ats_profiles import (
+    PROFILE_HANDLER_REGISTRY,
     ATSFormHandler,
-    ATSProfile,
     FormFillingProgress,
     FormFillingResult,
-    PROFILE_HANDLER_REGISTRY,
 )
 from browser_engine.human_simulator import HumanSimulator
 from browser_engine.selectors import SelectorRegistry, dynamic_select
@@ -150,7 +148,7 @@ class FormFiller:
                 "No registered handler for ATS — using generic fallback",
                 profile=detection.profile.value,
             )
-            from browser_engine.ats_profiles.generic import GenericFormHandler  # noqa: PLC0415
+            from browser_engine.ats_profiles.generic import GenericFormHandler
 
             handler = GenericFormHandler()
             kwargs = {
@@ -416,7 +414,7 @@ class FormFiller:
 
         self._logger.info("Waiting for human approval (HITL gate)", timeout_minutes=timeout_minutes)
 
-        import asyncio  # noqa: PLC0415
+        import asyncio
 
         poll_interval = 2.0  # seconds
         max_polls = int((timeout_minutes * 60) / poll_interval)

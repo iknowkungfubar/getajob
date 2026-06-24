@@ -18,7 +18,6 @@ import base64
 import hashlib
 import hmac
 import os
-import secrets
 from typing import Protocol
 
 import structlog
@@ -27,13 +26,13 @@ from cryptography.exceptions import InvalidTag, UnsupportedAlgorithm
 from core.exceptions import SecurityError
 
 __all__: list[str] = [
-    "encrypt_value",
+    "EncryptionProvider",
     "decrypt_value",
     "derive_key",
-    "tokenize_pii",
     "detokenize_pii",
+    "encrypt_value",
     "generate_key",
-    "EncryptionProvider",
+    "tokenize_pii",
 ]
 
 logger = structlog.get_logger(__name__)

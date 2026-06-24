@@ -13,13 +13,12 @@ truth validation.
 from __future__ import annotations as _annotations
 
 import re
-from collections.abc import Sequence
 from typing import Any
 
 import structlog
 from pydantic import BaseModel, Field
 
-from core.schemas import ProfileRead, SkillSchema, WorkExperienceSchema
+from core.schemas import ProfileRead, WorkExperienceSchema
 
 __all__: list[str] = [
     "TruthValidator",
@@ -192,7 +191,7 @@ class TruthValidator:
         # Year estimation (rough).
         total_years = 0.0
         if profile.work_experiences:
-            import datetime  # noqa: PLC0415
+            import datetime
 
             for exp in profile.work_experiences:
                 if exp.start_date:
@@ -408,4 +407,4 @@ class TruthValidator:
     # ── Convenience ────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
-        return f"<TruthValidator>"
+        return "<TruthValidator>"

@@ -20,28 +20,22 @@ from __future__ import annotations as _annotations
 
 import asyncio
 import datetime
-import json
 import re
-import statistics
 import time
-import uuid
-from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
 import structlog
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
-
-from core.config import get_settings
-from core.database import get_session, create_engine
-from core.event_bus import EventType, EventPriority
-from core.exceptions import IngestionError, ConfigurationError
-from core.models import JobListing
-from core.schemas import JobListingCreate, SearchVectorConfig
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from agents.base import BaseAgent
+from core.database import create_engine, get_session
+from core.event_bus import EventPriority, EventType
+from core.exceptions import IngestionError
+from core.models import JobListing
+from core.schemas import JobListingCreate, SearchVectorConfig
 
 __all__: list[str] = [
     "IngestionAgent",
@@ -754,7 +748,7 @@ class IngestionAgent(BaseAgent):
             A list of validated search-vector configs.  Falls back to
             sensible defaults if the YAML overlay is missing or empty.
         """
-        from core.config import load_config  # noqa: PLC0415
+        from core.config import load_config
 
         overlay = load_config()
         raw_vectors = overlay.get("search_vectors", [])

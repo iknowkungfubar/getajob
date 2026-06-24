@@ -18,7 +18,6 @@ Key behaviours:
 
 from __future__ import annotations as _annotations
 
-import datetime
 import re
 import uuid
 from typing import Any
@@ -26,13 +25,11 @@ from typing import Any
 import structlog
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from core.config import get_settings
-from core.database import create_engine, get_session
+from agents.base import BaseAgent
+from core.database import create_engine
 from core.exceptions import TailoringError
 from core.llm_client import LLMClient, get_llm_client
 from core.schemas import TailoringResponse
-
-from agents.base import BaseAgent
 
 __all__: list[str] = [
     "TailoringAgent",
@@ -104,7 +101,7 @@ class TailoringAgent(BaseAgent):
     def _profile_store(self) -> Any:
         """Lazily initialised :class:`~profile_engine.profile_store.ProfileStore`."""
         if self._profile_store_val is None:
-            from profile_engine.profile_store import ProfileStore  # noqa: PLC0415
+            from profile_engine.profile_store import ProfileStore
             self._profile_store_val = ProfileStore(self._engine)
         return self._profile_store_val
 

@@ -14,7 +14,11 @@ from typing import Any
 import structlog
 from playwright.async_api import Page
 
-from browser_engine.ats_profiles import ATSFormHandler, ATSProfile, FormFillingResult, PROFILE_HANDLER_REGISTRY
+from browser_engine.ats_profiles import (
+    PROFILE_HANDLER_REGISTRY,
+    ATSProfile,
+    FormFillingResult,
+)
 
 __all__: list[str] = [
     "LinkedInFormHandler",
@@ -106,9 +110,9 @@ class LinkedInFormHandler:
         Returns:
             A :class:`FormFillingResult`.
         """
-        from browser_engine.form_filler import FormFiller  # noqa: PLC0415
-        from browser_engine.human_simulator import HumanSimulator  # noqa: PLC0415
-        from browser_engine.selectors import SelectorRegistry  # noqa: PLC0415
+        from browser_engine.form_filler import FormFiller
+        from browser_engine.human_simulator import HumanSimulator
+        from browser_engine.selectors import SelectorRegistry
 
         human: HumanSimulator = kwargs.get("human_simulator", HumanSimulator())
         selectors: SelectorRegistry = kwargs.get("selector_registry", SelectorRegistry())

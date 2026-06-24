@@ -9,11 +9,11 @@ parsing).
 from __future__ import annotations as _annotations
 
 __all__: list[str] = [
+    "ExperienceParser",
     "ProfileStore",
     "VectorStore",
-    "ExperienceParser",
 ]
 
+from profile_engine.experience_parser import ExperienceParser
 from profile_engine.profile_store import ProfileStore
 from profile_engine.vector_store import VectorStore
-from profile_engine.experience_parser import ExperienceParser

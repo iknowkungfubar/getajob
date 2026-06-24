@@ -163,7 +163,7 @@ addopts = [
 ]
 
 [tool.coverage.run]
-source = ["getajob"]
+source = ["core", "agents", "browser_engine", "profile_engine", "tailoring_engine", "outreach_engine", "approval_queue", "getajob"]
 branch = true
 
 [tool.coverage.report]

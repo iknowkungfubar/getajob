@@ -9,7 +9,6 @@ automated traffic from a genuine human user.
 from __future__ import annotations as _annotations
 
 import os
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -22,8 +21,8 @@ from core.config import get_settings
 from core.exceptions import BrowserError
 
 __all__: list[str] = [
-    "StealthBrowser",
     "STEALTH_INIT_SCRIPT",
+    "StealthBrowser",
 ]
 
 logger = structlog.get_logger(__name__)

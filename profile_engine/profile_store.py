@@ -23,8 +23,14 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from core.config import get_settings
 from core.exceptions import ProfileError, SecurityError
 from core.models import UserProfile, WorkExperience
-from core.schemas import ProfileCreate, ProfileRead, ProfileUpdate, SkillSchema, WorkExperienceSchema
-from core.security import decrypt_value, encrypt_value, derive_key
+from core.schemas import (
+    ProfileCreate,
+    ProfileRead,
+    ProfileUpdate,
+    SkillSchema,
+    WorkExperienceSchema,
+)
+from core.security import decrypt_value, derive_key, encrypt_value
 
 __all__: list[str] = [
     "ProfileStore",
@@ -112,7 +118,7 @@ class ProfileStore:
         Returns:
             The newly created profile (PII decrypted for the response).
         """
-        from core.database import get_session  # noqa: PLC0415
+        from core.database import get_session
 
         async def _do(session: AsyncSession) -> ProfileRead:
             skills_json = _skills_to_json(data.skills) if data.skills else None
@@ -160,7 +166,7 @@ class ProfileStore:
         Returns:
             The profile with decrypted PII, or ``None`` if not found.
         """
-        from core.database import get_session  # noqa: PLC0415
+        from core.database import get_session
 
         async def _do(session: AsyncSession) -> ProfileRead | None:
             result = await session.execute(
@@ -195,7 +201,7 @@ class ProfileStore:
         Returns:
             The updated profile (new version).
         """
-        from core.database import get_session  # noqa: PLC0415
+        from core.database import get_session
 
         async def _do(session: AsyncSession) -> ProfileRead:
             # Load current active profile.
@@ -279,7 +285,7 @@ class ProfileStore:
         Returns:
             A sequence of profiles (PII decrypted).
         """
-        from core.database import get_session  # noqa: PLC0415
+        from core.database import get_session
 
         async def _do(session: AsyncSession) -> Sequence[ProfileRead]:
             result = await session.execute(
@@ -310,7 +316,7 @@ class ProfileStore:
         Returns:
             The profile as a plain Python dict ready for ``json.dump``.
         """
-        from core.database import get_session  # noqa: PLC0415
+        from core.database import get_session
 
         async with get_session(self._engine) as session:
             profile = await self.get_profile(profile_id, session=session)
@@ -387,8 +393,9 @@ class ProfileStore:
             - ``work_experiences`` — list of experience dicts.
             - ``experience_years`` — total years computed from date ranges.
         """
-        from core.database import get_session  # noqa: PLC0415
-        from sqlalchemy import select  # noqa: PLC0415
+        from sqlalchemy import select
+
+        from core.database import get_session
 
         result: dict[str, Any] = {
             "name": "",

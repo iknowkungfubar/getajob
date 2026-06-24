@@ -17,15 +17,13 @@ from __future__ import annotations as _annotations
 
 import re
 import string
-from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any
 
 import structlog
 
 __all__: list[str] = [
-    "AntiAIDetector",
     "AnalysisResult",
+    "AntiAIDetector",
 ]
 
 logger = structlog.get_logger(__name__)
@@ -249,7 +247,7 @@ class AntiAIDetector:
             Tuple of ``(normalised_score, warnings)`` where *normalised_score*
             is 0.0 (human-like variance) to 1.0 (uniform — AI-like).
         """
-        import statistics  # noqa: PLC0415
+        import statistics
 
         sentences = self._split_sentences(text)
         if len(sentences) < 3:

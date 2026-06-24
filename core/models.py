@@ -18,7 +18,6 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -27,11 +26,11 @@ from core.database import Base
 from core.state_machine import ApplicationState
 
 __all__: list[str] = [
+    "Application",
+    "ApplicationEvent",
     "JobListing",
     "UserProfile",
     "WorkExperience",
-    "Application",
-    "ApplicationEvent",
 ]
 
 
@@ -135,7 +134,7 @@ class JobListing(_TimestampMixin, Base):
     )
 
     # ── Relationships ────────────────────────────────────────────────────────
-    applications: Mapped[list["Application"]] = relationship(
+    applications: Mapped[list[Application]] = relationship(
         "Application",
         back_populates="job_listing",
         cascade="all, delete-orphan",
@@ -214,14 +213,14 @@ class UserProfile(_TimestampMixin, Base):
     )
 
     # ── Relationships ────────────────────────────────────────────────────────
-    work_experiences: Mapped[list["WorkExperience"]] = relationship(
+    work_experiences: Mapped[list[WorkExperience]] = relationship(
         "WorkExperience",
         back_populates="profile",
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="WorkExperience.start_date.desc()",
     )
-    applications: Mapped[list["Application"]] = relationship(
+    applications: Mapped[list[Application]] = relationship(
         "Application",
         back_populates="profile",
         cascade="all, delete-orphan",
@@ -279,7 +278,7 @@ class WorkExperience(_TimestampMixin, Base):
     )
 
     # ── Relationships ────────────────────────────────────────────────────────
-    profile: Mapped["UserProfile"] = relationship(
+    profile: Mapped[UserProfile] = relationship(
         "UserProfile",
         back_populates="work_experiences",
     )
@@ -346,15 +345,15 @@ class Application(_TimestampMixin, Base):
     )
 
     # ── Relationships ────────────────────────────────────────────────────────
-    job_listing: Mapped["JobListing"] = relationship(
+    job_listing: Mapped[JobListing] = relationship(
         "JobListing",
         back_populates="applications",
     )
-    profile: Mapped["UserProfile"] = relationship(
+    profile: Mapped[UserProfile] = relationship(
         "UserProfile",
         back_populates="applications",
     )
-    events: Mapped[list["ApplicationEvent"]] = relationship(
+    events: Mapped[list[ApplicationEvent]] = relationship(
         "ApplicationEvent",
         back_populates="application",
         cascade="all, delete-orphan",
@@ -403,7 +402,7 @@ class ApplicationEvent(Base):
     )
 
     # ── Relationships ────────────────────────────────────────────────────────
-    application: Mapped["Application"] = relationship(
+    application: Mapped[Application] = relationship(
         "Application",
         back_populates="events",
     )
