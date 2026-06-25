@@ -36,6 +36,7 @@ from core.config import get_settings
 from core.exceptions import ConfigurationError
 
 __all__: list[str] = [
+    "AsyncEngine",
     "Base",
     "create_engine",
     "get_connection",
@@ -89,7 +90,7 @@ def create_engine(**kwargs: Any) -> AsyncEngine:
     # Allow direct URL override (supports sqlite+aiosqlite for local dev).
     url = kwargs.pop("url", None) or os.environ.get("GETAJOB_DATABASE__URL", "")
     if url:
-        pool_kw = {}
+        pool_kw: dict[str, Any] = {}
         if url.startswith("sqlite"):
             pool_kw["poolclass"] = NullPool
         else:

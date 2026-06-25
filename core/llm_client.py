@@ -10,8 +10,10 @@ from __future__ import annotations as _annotations
 import asyncio
 import json
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
-from typing import Any
+from collections.abc import AsyncIterator, Callable, Coroutine
+from typing import Any, TypeVar, cast
+
+R = TypeVar("R")
 
 import structlog
 
@@ -87,7 +89,7 @@ class LLMClient(ABC):
         """
 
     @abstractmethod
-    async def generate_stream(
+    def generate_stream(  # type: ignore[misc]  # abstract: subclasses use yield, making this async-generator
         self,
         prompt: str,
         *,
@@ -105,8 +107,12 @@ class LLMClient(ABC):
             Successive text chunks as they arrive.
         """
         ...
+        return
+        yield  # pragma: no cover
 
-    async def _retry(self, coro_factory: Any, label: str = "llm_call") -> Any:
+    async def _retry(
+        self, coro_factory: Callable[[], Coroutine[Any, Any, R]], label: str = "llm_call"
+    ) -> R:
         """Retry *coro_factory* up to ``DEFAULT_MAX_RETRIES`` times on failure."""
         last_exc: Exception | None = None
         for attempt in range(1, self.DEFAULT_MAX_RETRIES + 1):
@@ -124,7 +130,9 @@ class LLMClient(ABC):
                 if attempt < self.DEFAULT_MAX_RETRIES:
                     await asyncio.sleep(self.DEFAULT_RETRY_DELAY_S * attempt)
         msg = f"LLM call failed after {self.DEFAULT_MAX_RETRIES} attempts"
-        raise TailoringError(msg, details={"label": label, "last_error": str(last_exc)}) from last_exc
+        raise TailoringError(
+            msg, details={"label": label, "last_error": str(last_exc)}
+        ) from last_exc
 
 
 # ── Claude API Client ────────────────────────────────────────────────────────────
@@ -184,14 +192,14 @@ class ClaudeAPIClient(LLMClient):
                 system=system or "",
                 messages=[{"role": "user", "content": prompt}],
             )
-            return resp.content[0].text  # type: ignore[union-attr]
+            return cast(str, resp.content[0].text)
 
         return await self._retry(_call, label="generate_text")
 
     async def generate_structured(
         self,
         prompt: str,
-        schema: dict[str, Any],
+        _schema: dict[str, Any],
         *,
         system: str | None = None,
         max_tokens: int | None = None,
@@ -209,14 +217,14 @@ class ClaudeAPIClient(LLMClient):
                 # No beta header is required for structured output on Claude 4.x.
                 extra_headers={},
             )
-            text = resp.content[0].text  # type: ignore[union-attr]
+            text = cast(str, resp.content[0].text)
             # Strip markdown fences if present.
             text = text.strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[-1]
                 text = text.rsplit("```", 1)[0].strip()
 
-            return json.loads(text)
+            return cast(dict[str, Any], json.loads(text))
 
         return await self._retry(_call, label="generate_structured")
 
@@ -260,9 +268,12 @@ class MockLLMClient(LLMClient):
         max_tokens: int | None = None,
         temperature: float | None = None,
     ) -> str:
-        self.call_history.append(
-            {"method": "generate_text", "prompt": prompt, "system": system, "temperature": temperature}
-        )
+        self.call_history.append({
+            "method": "generate_text",
+            "prompt": prompt,
+            "system": system,
+            "temperature": temperature,
+        })
         return self._lookup(prompt, system)
 
     async def generate_structured(
@@ -274,11 +285,14 @@ class MockLLMClient(LLMClient):
         max_tokens: int | None = None,
         temperature: float | None = None,
     ) -> dict[str, Any]:
-        self.call_history.append(
-            {"method": "generate_structured", "prompt": prompt, "system": system, "schema": schema}
-        )
+        self.call_history.append({
+            "method": "generate_structured",
+            "prompt": prompt,
+            "system": system,
+            "schema": schema,
+        })
         raw = self._lookup(prompt, system)
-        return json.loads(raw)
+        return cast(dict[str, Any], json.loads(raw))
 
     async def generate_stream(
         self,

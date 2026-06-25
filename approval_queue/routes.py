@@ -14,12 +14,13 @@ from __future__ import annotations as _annotations
 import datetime
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from sqlalchemy import func, select, update
+from sqlalchemy import ColumnElement, func, select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -40,7 +41,7 @@ router = APIRouter()
 # ── Dependency ──────────────────────────────────────────────────────────────
 
 
-async def get_db(request: Request) -> AsyncIterator[AsyncSession | None]:  # type: ignore[misc]
+async def get_db(request: Request) -> AsyncIterator[AsyncSession | None]:
     """Yield a database session if the engine is available.
 
     Yields ``None`` in UI-only mode (no DB connection) so routes can
@@ -74,23 +75,24 @@ async def dashboard_page(
         return HTMLResponse("<h1>Templates not configured</h1>")
 
     stats = await _fetch_stats(db)
-    applications_data = await _fetch_applications(
-        db, state_filter=None, limit=20, offset=0
-    )
+    applications_data = await _fetch_applications(db, state_filter=None, limit=20, offset=0)
 
-    return templates.TemplateResponse(
-        request,
-        "dashboard.html",
-        {
-            "stats": stats,
-            "applications": applications_data.get("items", []),
-            "demo_mode": db is None,
-            "pagination": {
-                "page": applications_data.get("page", 1),
-                "total_pages": applications_data.get("total_pages", 1),
-                "total": applications_data.get("total", 0),
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request,
+            "dashboard.html",
+            {
+                "stats": stats,
+                "applications": applications_data.get("items", []),
+                "demo_mode": db is None,
+                "pagination": {
+                    "page": applications_data.get("page", 1),
+                    "total_pages": applications_data.get("total_pages", 1),
+                    "total": applications_data.get("total", 0),
+                },
             },
-        },
+        ),
     )
 
 
@@ -114,7 +116,9 @@ async def review_page(
     try:
         app_uuid = uuid.UUID(application_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid application ID: {application_id!r}") from None
+        raise HTTPException(
+            status_code=400, detail=f"Invalid application ID: {application_id!r}"
+        ) from None
 
     # Fetch application data.
     app_data = await _fetch_application_detail(db, app_uuid)
@@ -126,10 +130,13 @@ async def review_page(
         else:
             raise HTTPException(status_code=404, detail="Application not found")
 
-    return templates.TemplateResponse(
-        request,
-        "review.html",
-        {"application": app_data, "demo_mode": db is None},
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request,
+            "review.html",
+            {"application": app_data, "demo_mode": db is None},
+        ),
     )
 
 
@@ -139,7 +146,7 @@ async def settings_page(request: Request) -> HTMLResponse:
     templates = request.app.state.templates
     if templates is None:
         return HTMLResponse("<h1>Templates not configured</h1>")
-    return templates.TemplateResponse(request, "settings.html")
+    return cast(HTMLResponse, templates.TemplateResponse(request, "settings.html"))
 
 
 # ── API: Stats ──────────────────────────────────────────────────────────────
@@ -214,7 +221,9 @@ async def get_application(
     try:
         app_uuid = uuid.UUID(application_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid application ID: {application_id!r}") from None
+        raise HTTPException(
+            status_code=400, detail=f"Invalid application ID: {application_id!r}"
+        ) from None
 
     app_data = await _fetch_application_detail(db, app_uuid)
     if app_data is None:
@@ -277,7 +286,9 @@ async def review_application(
     try:
         app_uuid = uuid.UUID(application_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid application ID: {application_id!r}") from None
+        raise HTTPException(
+            status_code=400, detail=f"Invalid application ID: {application_id!r}"
+        ) from None
 
     # Determine target state from action.
     target = {
@@ -313,7 +324,7 @@ async def review_application(
             .where(Application.state == app.state)
             .values(state=target, notes=reason)
         )
-        result = await db.execute(stmt)
+        result = cast(CursorResult[Any], await db.execute(stmt))
         if result.rowcount == 0:
             raise HTTPException(
                 status_code=409,
@@ -432,10 +443,18 @@ async def bulk_approve(
             try:
                 transition_state(app.state, ApplicationState.STAGED, application_id=app_id)
             except Exception:
-                results.append({"application_id": app_id, "status": "error", "detail": "Invalid transition"})
+                results.append({
+                    "application_id": app_id,
+                    "status": "error",
+                    "detail": "Invalid transition",
+                })
                 continue
 
-            stmt = update(Application).where(Application.id == app_uuid).values(state=ApplicationState.STAGED)
+            stmt = (
+                update(Application)
+                .where(Application.id == app_uuid)
+                .values(state=ApplicationState.STAGED)
+            )
             await db.execute(stmt)
 
             event_entry = ApplicationEvent(
@@ -446,7 +465,11 @@ async def bulk_approve(
             )
             db.add(event_entry)
             success_count += 1
-            results.append({"application_id": app_id, "status": "ok", "new_state": ApplicationState.STAGED.value})
+            results.append({
+                "application_id": app_id,
+                "status": "ok",
+                "new_state": ApplicationState.STAGED.value,
+            })
 
         except Exception as exc:
             results.append({"application_id": app_id, "status": "error", "detail": str(exc)})
@@ -550,20 +573,20 @@ async def _fetch_applications(
     if db is None:
         return _mock_applications(state_filter, limit, offset)
 
-    conditions = [Application.profile_id.isnot(None)]
+    conditions: list[ColumnElement[bool]] = [Application.profile_id.isnot(None)]
 
     if state_filter:
         try:
             target_state = ApplicationState(state_filter.upper())
             conditions.append(Application.state == target_state)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid state: {state_filter!r}") from None
+            raise HTTPException(
+                status_code=400, detail=f"Invalid state: {state_filter!r}"
+            ) from None
 
     try:
         # Total count.
-        count_result = await db.execute(
-            select(func.count(Application.id)).where(*conditions)
-        )
+        count_result = await db.execute(select(func.count(Application.id)).where(*conditions))
         total = count_result.scalar() or 0
 
         # Fetch rows with joined job listing.
@@ -821,7 +844,9 @@ def _mock_application_detail(application_id: str) -> dict[str, Any]:
             "url": "https://careers.acme.corp/123",
             "source": "linkedin",
             "required_skills": ["Rust", "Python", "Kubernetes", "PostgreSQL"],
-            "posted_date": (datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=7)).isoformat(),
+            "posted_date": (
+                datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=7)
+            ).isoformat(),
         },
         "recruiter_name": "Jane Smith",
         "recruiter_email": "jane.smith@acme.example",
@@ -830,24 +855,34 @@ def _mock_application_detail(application_id: str) -> dict[str, Any]:
                 "id": str(uuid.uuid4()),
                 "from_state": None,
                 "to_state": ApplicationState.DISCOVERED.value,
-                "timestamp": (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=48)).isoformat(),
+                "timestamp": (
+                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=48)
+                ).isoformat(),
                 "metadata": {"source": "linkedin"},
             },
             {
                 "id": str(uuid.uuid4()),
                 "from_state": ApplicationState.DISCOVERED.value,
                 "to_state": ApplicationState.TAILORED.value,
-                "timestamp": (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=24)).isoformat(),
+                "timestamp": (
+                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=24)
+                ).isoformat(),
                 "metadata": {"match_score": 0.85},
             },
             {
                 "id": str(uuid.uuid4()),
                 "from_state": ApplicationState.TAILORED.value,
                 "to_state": ApplicationState.PENDING_REVIEW.value,
-                "timestamp": (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=6)).isoformat(),
+                "timestamp": (
+                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=6)
+                ).isoformat(),
                 "metadata": {},
             },
         ],
-        "created_at": (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=48)).isoformat(),
-        "updated_at": (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=6)).isoformat(),
+        "created_at": (
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=48)
+        ).isoformat(),
+        "updated_at": (
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=6)
+        ).isoformat(),
     }

@@ -1,0 +1,19 @@
+Fix ALL mypy --strict errors in /home/turin/getajob.
+
+Read the current mypy output first:
+cd /home/turin/getajob && python3 -m mypy core/ agents/ getajob/ approval_queue/ --strict 2>&1
+
+Then fix every error. The known categories are:
+
+1. **union-attr** (agents/orchestrator_agent.py:490): `Item "None" of "TailoringAgent | None" has no attribute "tailor"` — add an assert or guard before use
+2. **type-arg** (getajob/__init__.py, cli.py:1359): Missing type arguments for generic type "dict" — add dict[str, Any] or similar
+3. **import-untyped** (getajob/cli.py:32): Library stubs not installed for "yaml" — add `# type: ignore[import-untyped]` or install types-PyYAML
+4. **unused-ignore** (getajob/cli.py:224): Remove unused `# type: ignore` comments
+5. **possibly-undefined** (getajob/cli.py:271): Name "create_engine" may be undefined — add proper conditional or default
+6. **arg-type** (getajob/cli.py:380,505,574): _run_async argument type mismatch — fix the calling pattern
+
+RULE: Do NOT add `# type: ignore[xxx]` to suppress errors unless there's genuinely no way to fix the type. Fix the types properly.
+
+After fixing, run:
+cd /home/turin/getajob && python3 -m mypy core/ agents/ getajob/ approval_queue/ --strict 2>&1 | tail -5
+Then: python3 -m pytest tests/ -q --tb=short 2>&1 | tail -3

@@ -53,7 +53,7 @@ _LINKEDIN_SELECTORS: dict[str, str] = {
     "salary": 'input[name*="salary"], input[placeholder*="salary"]',
     "radio_group": 'fieldset[data-test-form-builder-radio-button-form-component], div[role="radiogroup"]',
     "checkbox": 'input[type="checkbox"]',
-    "dropdown": 'select',
+    "dropdown": "select",
     "text_input": 'input:not([type="hidden"]):not([type="submit"]):not([type="file"])',
     "textarea": 'textarea:not([type="hidden"])',
     "file_upload_label": 'label:has-text("Resume"), label:has-text("CV")',
@@ -158,9 +158,7 @@ class LinkedInFormHandler:
 
                 if submit_btn is not None or review_btn is not None:
                     # On the review/submit page.
-                    await self._emit(
-                        on_progress, result, "Review & submit", current_step + 1, 6
-                    )
+                    await self._emit(on_progress, result, "Review & submit", current_step + 1, 6)
                     await human.random_scroll(page)
                     await human.sleep_between_actions()
 
@@ -278,7 +276,10 @@ class LinkedInFormHandler:
                 elif self._field_matches(label_text, placeholder, name, "salary"):
                     # Skip salary expectations — user may not want to share.
                     pass
-                elif self._field_matches(label_text, placeholder, name, "linkedin") and profile.linkedin_url:
+                elif (
+                    self._field_matches(label_text, placeholder, name, "linkedin")
+                    and profile.linkedin_url
+                ):
                     await human.human_type(page, inp, profile.linkedin_url)
                     result.fields_filled.append("linkedin")
             except Exception as exc:
@@ -292,7 +293,10 @@ class LinkedInFormHandler:
                 if not await dd.is_visible():
                     continue
                 label_text = await self._find_label_text(page, dd)
-                if re.search(r"work.?auth|visa|sponsor", label_text, re.IGNORECASE) and profile.work_authorization:
+                if (
+                    re.search(r"work.?auth|visa|sponsor", label_text, re.IGNORECASE)
+                    and profile.work_authorization
+                ):
                     await dd.select_option(label=profile.work_authorization)
                     result.fields_filled.append("work_authorization")
             except Exception as exc:

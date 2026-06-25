@@ -129,10 +129,12 @@ _SKILL_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
 # ── Date patterns ────────────────────────────────────────────────────────────────
 
 _DATE_PATTERNS = [
-    re.compile(r"(?P<start>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4})"
-               r"\s*[---to]+\s*"
-               r"(?P<end>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4}|Present|Current|Now)",
-               re.IGNORECASE),
+    re.compile(
+        r"(?P<start>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4})"
+        r"\s*[---to]+\s*"
+        r"(?P<end>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4}|Present|Current|Now)",
+        re.IGNORECASE,
+    ),
     re.compile(r"(?P<start>\d{4})\s*[---]\s*(?P<end>\d{4}|Present|Current|Now)"),
 ]
 
@@ -221,7 +223,7 @@ class ExperienceParser:
         if use_llm and self._llm is not None and len(text) > 20:
             try:
                 llm_skills = self._extract_skills_via_llm(text)
-                for skill in llm_skills:
+                for skill in llm_skills:  # type: ignore[attr-defined]  # sync caller, async method - opt-in LLM path
                     key = skill.name.lower()
                     if key not in found and key not in _KNOWN_SKILLS:
                         found[key] = skill
@@ -252,7 +254,17 @@ class ExperienceParser:
                         "type": "object",
                         "properties": {
                             "name": {"type": "string"},
-                            "category": {"type": "string", "enum": ["language", "framework", "database", "cloud", "tool", "concept"]},
+                            "category": {
+                                "type": "string",
+                                "enum": [
+                                    "language",
+                                    "framework",
+                                    "database",
+                                    "cloud",
+                                    "tool",
+                                    "concept",
+                                ],
+                            },
                             "proficiency": {"type": ["string", "null"]},
                         },
                         "required": ["name", "category"],
@@ -298,7 +310,7 @@ class ExperienceParser:
         # Strategy 2: Fall back to LLM-based parsing if available and regex failed.
         if not experiences and self._llm is not None and len(text) > 100:
             try:
-                experiences = self._parse_via_llm(text)
+                experiences = self._parse_via_llm(text)  # type: ignore[assignment]  # sync caller, async method - opt-in LLM path
             except Exception:
                 logger.warning("LLM resume parsing failed", source=source_name)
 
@@ -340,7 +352,9 @@ class ExperienceParser:
                 if match:
                     # Save the previous block if non-empty.
                     if current_block:
-                        exp = self._build_experience(current_block, current_dates[0], current_dates[1])
+                        exp = self._build_experience(
+                            current_block, current_dates[0], current_dates[1]
+                        )
                         if exp is not None:
                             experiences.append(exp)
 
@@ -394,8 +408,7 @@ class ExperienceParser:
         full_text = " ".join(lines)
         skills = self.extract_skills_from_text(full_text)
         is_current = (
-            end_date is not None
-            and end_date >= datetime.date.today() - datetime.timedelta(days=60)
+            end_date is not None and end_date >= datetime.date.today() - datetime.timedelta(days=60)
         )
 
         return WorkExperienceSchema(

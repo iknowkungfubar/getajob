@@ -16,7 +16,7 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from fastapi import FastAPI, Request, Response
@@ -167,13 +167,13 @@ async def session_auth_middleware(request: Request, call_next: Any) -> Response:
     public_paths = {"/login", "/static", "/api/health"}
 
     if any(request.url.path.startswith(p) for p in public_paths):
-        return await call_next(request)
+        return cast(Response, await call_next(request))
 
     session = request.cookies.get("getajob_session")
     token: str | None = getattr(request.app.state, "session_token", None)
 
     if session is not None and token is not None and session == token:
-        return await call_next(request)
+        return cast(Response, await call_next(request))
 
     # Redirect to login for HTML requests, 401 for API requests.
     if request.url.path.startswith("/api/"):
@@ -208,7 +208,7 @@ async def login(request: Request) -> Response:
     """
     settings = get_settings()
     form = await request.form()
-    password: str = form.get("password", "")
+    password = str(form.get("password", ""))
 
     if not password:
         template: Jinja2Templates | None = getattr(request.app.state, "templates", None)
@@ -235,9 +235,7 @@ async def login(request: Request) -> Response:
     # Production: check against dedicated approval password.
     # Priority: env var > config file > fail closed.
     expected = (
-        os.environ.get("GETAJOB_APPROVAL_PASSWORD")
-        or settings.security.approval_password
-        or ""
+        os.environ.get("GETAJOB_APPROVAL_PASSWORD") or settings.security.approval_password or ""
     )
 
     if password == expected:
@@ -256,9 +254,7 @@ async def login(request: Request) -> Response:
     logger.warning("Failed login attempt")
     template = getattr(request.app.state, "templates", None)
     if template is not None:
-        return template.TemplateResponse(
-            request, "login.html", {"error": "Invalid password"}
-        )
+        return cast(Response, template.TemplateResponse(request, "login.html", {"error": "Invalid password"}))
     return _fallback_login_html(error="Invalid password")
 
 

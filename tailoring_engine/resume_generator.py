@@ -44,10 +44,14 @@ class ResumeResult(BaseModel):
     """Result of a resume generation operation."""
 
     resume_text: str = Field(..., description="Generated resume text (markdown / plain text)")
-    format_used: str = Field(default="hybrid", description="Resume format: chronological, hybrid, functional")
+    format_used: str = Field(
+        default="hybrid", description="Resume format: chronological, hybrid, functional"
+    )
 
     # Anti-AI guardrail analysis.
-    anti_ai: AnalysisResult = Field(default_factory=lambda: AnalysisResult(score=0.0, flagged_phrases=[], suggestions=[]))
+    anti_ai: AnalysisResult = Field(
+        default_factory=lambda: AnalysisResult(score=0.0, flagged_phrases=[], suggestions=[])
+    )
 
     # Truth validation.
     validation: ValidationResult = Field(
@@ -101,7 +105,9 @@ class ResumeGenerator:
             self._system_prompt = prompt_path.read_text(encoding="utf-8")
         else:
             self._system_prompt = self._default_system_prompt()
-            logger.warning("System prompt file not found - using built-in default", path=str(prompt_path))
+            logger.warning(
+                "System prompt file not found - using built-in default", path=str(prompt_path)
+            )
 
         self._settings = get_settings()
 
@@ -138,7 +144,9 @@ class ResumeGenerator:
             raise TailoringError(msg)
 
         # Build the user prompt.
-        user_prompt = self._build_prompt(job_listing, profile, context_analysis, format_style, style_instructions)
+        user_prompt = self._build_prompt(
+            job_listing, profile, context_analysis, format_style, style_instructions
+        )
 
         # Generate.
         try:
@@ -157,7 +165,10 @@ class ResumeGenerator:
 
         # Run anti-AI guardrail.
         anti_ai_result = self._anti_ai.scan_text(resume_text)
-        if anti_ai_result.score > tailoring_cfg.get("anti_ai_threshold", 0.3) and anti_ai_result.suggestions:
+        if (
+            anti_ai_result.score > tailoring_cfg.get("anti_ai_threshold", 0.3)
+            and anti_ai_result.suggestions
+        ):
             # Apply suggested replacements.
             resume_text = self._apply_anti_ai_fixes(resume_text, anti_ai_result)
 
@@ -263,11 +274,15 @@ class ResumeGenerator:
 
     # ── Format-specific helpers ────────────────────────────────────────────────
 
-    async def generate_chronological(self, job_listing: JobListingRead, profile: ProfileRead) -> ResumeResult:
+    async def generate_chronological(
+        self, job_listing: JobListingRead, profile: ProfileRead
+    ) -> ResumeResult:
         """Convenience wrapper for chronological-format resume."""
         return await self.generate_resume(job_listing, profile, format_style="chronological")
 
-    async def generate_functional(self, job_listing: JobListingRead, profile: ProfileRead) -> ResumeResult:
+    async def generate_functional(
+        self, job_listing: JobListingRead, profile: ProfileRead
+    ) -> ResumeResult:
         """Convenience wrapper for functional-format resume."""
         return await self.generate_resume(job_listing, profile, format_style="functional")
 

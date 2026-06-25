@@ -69,7 +69,9 @@ class LLMSettings(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
-    provider: str = Field(default="anthropic", description="LLM provider (anthropic, openai, local)")
+    provider: str = Field(
+        default="anthropic", description="LLM provider (anthropic, openai, local)"
+    )
     api_key: str = Field(default="", description="API key for the LLM provider")
     model: str = Field(default="claude-sonnet-4-6", description="Model identifier")
     max_tokens: int = Field(default=4096, ge=64, le=65536, description="Max response tokens")
@@ -100,10 +102,18 @@ class SecuritySettings(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
-    encryption_key: str = Field(default="", description="AES-256-GCM key (hex-encoded, 64 hex chars = 32 bytes)")
-    encryption_salt: str = Field(default="", description="PBKDF2 salt (hex-encoded, 32 hex chars = 16 bytes)")
-    tokenizer_salt: str = Field(default="", description="PII tokenizer salt (hex-encoded, 32 hex chars = 16 bytes)")
-    approval_password: str = Field(default="", description="HITL approval queue web UI password (separate from DB password)")
+    encryption_key: str = Field(
+        default="", description="AES-256-GCM key (hex-encoded, 64 hex chars = 32 bytes)"
+    )
+    encryption_salt: str = Field(
+        default="", description="PBKDF2 salt (hex-encoded, 32 hex chars = 16 bytes)"
+    )
+    tokenizer_salt: str = Field(
+        default="", description="PII tokenizer salt (hex-encoded, 32 hex chars = 16 bytes)"
+    )
+    approval_password: str = Field(
+        default="", description="HITL approval queue web UI password (separate from DB password)"
+    )
 
 
 class BrowserSettings(BaseSettings):
@@ -116,8 +126,12 @@ class BrowserSettings(BaseSettings):
     viewport_height: int = Field(default=1080, ge=480, description="Browser viewport height")
     locale: str = Field(default="en-US", description="Browser locale")
     proxy: str | None = Field(default=None, description="Proxy URL (http://user:pass@host:port)")
-    user_data_dir: str | None = Field(default=None, description="Persistent browser profile directory")
-    slow_mo_ms: int = Field(default=50, ge=0, le=2000, description="Slow-motion delay (ms) for stealth")
+    user_data_dir: str | None = Field(
+        default=None, description="Persistent browser profile directory"
+    )
+    slow_mo_ms: int = Field(
+        default=50, ge=0, le=2000, description="Slow-motion delay (ms) for stealth"
+    )
     navigation_timeout_seconds: int = Field(default=30, ge=5, description="Page navigation timeout")
 
 
@@ -157,7 +171,9 @@ class JobDiscoverySettings(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
-    max_applications_per_day: int = Field(default=50, ge=1, le=200, description="Daily application cap")
+    max_applications_per_day: int = Field(
+        default=50, ge=1, le=200, description="Daily application cap"
+    )
     rate_limits: dict[str, int] = Field(
         default_factory=lambda: {
             "linkedin": 10,

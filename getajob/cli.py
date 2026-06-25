@@ -137,8 +137,7 @@ def init(
     # ── Step 1: Check for existing .env ──────────────────────────────────
     if env_path.exists() and not force:
         overwrite = typer.confirm(
-            f"  {env_path} already exists.\n"
-            "  Overwrite existing configuration?",
+            f"  {env_path} already exists.\n  Overwrite existing configuration?",
             default=False,
         )
         if not overwrite:
@@ -151,11 +150,7 @@ def init(
     api_key = typer.prompt("  API key", hide_input=True)
 
     # ── Step 3: Write .env file ────────────────────────────────────────────
-    model = (
-        "claude-sonnet-4-6"
-        if provider.lower() in ("anthropic", "claude")
-        else "gpt-4o"
-    )
+    model = "claude-sonnet-4-6" if provider.lower() in ("anthropic", "claude") else "gpt-4o"
     encryption_key = os.urandom(32).hex()
     encryption_salt = os.urandom(16).hex()
     tokenizer_salt = os.urandom(16).hex()
@@ -221,12 +216,11 @@ GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY=50
         # Force settings reload now that .env exists on disk.
         import core.config as core_config
 
-        core_config._settings = None  # type: ignore[attr-defined]
+        core_config._settings = None
 
         # Step 5: Create user profile in the database.
         if has_profile:
             try:
-                from core.database import create_engine
                 from core.schemas import ProfileCreate
                 from profile_engine.profile_store import ProfileStore
 
@@ -240,30 +234,19 @@ GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY=50
                     )
                 )
                 console.print(
-                    f"  [green]✓[/] Profile created: [bold]{profile.name}[/]"
-                    f" (id: {profile.id})"
+                    f"  [green]✓[/] Profile created: [bold]{profile.name}[/] (id: {profile.id})"
                 )
                 await engine.dispose()
             except Exception as exc:
-                console.print(
-                    f"  [yellow]⚠[/] Could not create profile: {exc}"
-                )
-                console.print(
-                    "    You can create one later by creating a"
-                    " profile directly."
-                )
+                console.print(f"  [yellow]⚠[/] Could not create profile: {exc}")
+                console.print("    You can create one later by creating a profile directly.")
 
         # Step 6: Write default search vectors into settings.yaml.
         try:
             _write_default_search_vectors(project_root)
-            console.print(
-                "  [green]✓[/] Default search vectors written to"
-                " settings.yaml"
-            )
+            console.print("  [green]✓[/] Default search vectors written to settings.yaml")
         except Exception as exc:
-            console.print(
-                f"  [yellow]⚠[/] Could not write search vectors: {exc}"
-            )
+            console.print(f"  [yellow]⚠[/] Could not write search vectors: {exc}")
 
         # Step 7: Database setup (create tables + data directories).
         try:
@@ -279,13 +262,8 @@ GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY=50
             console.print("  [green]✓[/] Database schema ready.")
             await engine.dispose()
         except Exception as exc:
-            console.print(
-                f"  [yellow]⚠[/] Could not initialise database: {exc}"
-            )
-            console.print(
-                "    Ensure PostgreSQL is running and .env is"
-                " configured correctly."
-            )
+            console.print(f"  [yellow]⚠[/] Could not initialise database: {exc}")
+            console.print("    Ensure PostgreSQL is running and .env is configured correctly.")
 
     _run_async(_run_init())
 
@@ -352,16 +330,13 @@ def discover(
         try:
             if continuous:
                 console.print(
-                    "[blue]⟳[/] Continuous discovery mode -- "
-                    "press Ctrl+C to stop gracefully.\n"
+                    "[blue]⟳[/] Continuous discovery mode -- press Ctrl+C to stop gracefully.\n"
                 )
                 interval_seconds = interval * 60.0
                 while True:
                     result = await orchestrator.run_once()
                     _print_result_table(result, title="Discovery Pass Complete")
-                    console.print(
-                        f"[dim]Sleeping {interval:.0f} min until next pass...[/]\n"
-                    )
+                    console.print(f"[dim]Sleeping {interval:.0f} min until next pass...[/]\n")
                     await asyncio.sleep(interval_seconds)
             else:
                 with Progress(
@@ -377,7 +352,7 @@ def discover(
         finally:
             await orchestrator.stop()
 
-    _run_async(_run)
+    _run_async(_run())
 
 
 @app.command()
@@ -444,24 +419,16 @@ def tailor(
                 event_bus=event_bus,
             )
             await context_agent.start()
-            desc_text = (
-                listing.description_json.get("raw", "")
-                if listing.description_json
-                else ""
-            )
+            desc_text = listing.description_json.get("raw", "") if listing.description_json else ""
             analysis = await context_agent.analyze(
                 job_id=str(listing.id),
                 job_description=desc_text,
             )
             await context_agent.stop()
 
-            console.print(
-                f"\n  Match score: [bold]{analysis.match_score:.1%}[/]"
-            )
+            console.print(f"\n  Match score: [bold]{analysis.match_score:.1%}[/]")
             if analysis.matching_skills:
-                console.print(
-                    f"  Matching skills: {', '.join(analysis.matching_skills[:10])}"
-                )
+                console.print(f"  Matching skills: {', '.join(analysis.matching_skills[:10])}")
             if analysis.missing_skills:
                 console.print(
                     f"  [yellow]Missing skills: {', '.join(analysis.missing_skills[:5])}[/]"
@@ -472,9 +439,7 @@ def tailor(
             console.print()
 
             # Tailoring.
-            progress.add_task(
-                description="Generating resume & cover letter...", total=None
-            )
+            progress.add_task(description="Generating resume & cover letter...", total=None)
             tailoring_agent = TailoringAgent(
                 engine=engine,
                 llm_client=llm_client,
@@ -502,7 +467,7 @@ def tailor(
         )
         console.print(response_panel)
 
-    _run_async(_run)
+    _run_async(_run())
 
 
 @app.command()
@@ -545,17 +510,12 @@ def run(
         await orchestrator.start()
         try:
             if continuous:
-                console.print(
-                    "[blue]⟳[/] Continuous mode -- "
-                    "press Ctrl+C to stop gracefully.\n"
-                )
+                console.print("[blue]⟳[/] Continuous mode -- press Ctrl+C to stop gracefully.\n")
                 interval_seconds = interval * 60.0
                 while True:
                     result = await orchestrator.run_once()
                     _print_result_table(result, title="Pipeline Pass Complete")
-                    console.print(
-                        f"[dim]Sleeping {interval:.0f} min until next pass...[/]\n"
-                    )
+                    console.print(f"[dim]Sleeping {interval:.0f} min until next pass...[/]\n")
                     await asyncio.sleep(interval_seconds)
             else:
                 with Progress(
@@ -571,7 +531,7 @@ def run(
         finally:
             await orchestrator.stop()
 
-    _run_async(_run)
+    _run_async(_run())
 
 
 @app.command()
@@ -598,9 +558,7 @@ def serve(
     """
     _check_settings()
 
-    console.print(
-        Panel.fit("[bold magenta]🌐  Approval Queue Web UI[/]", border_style="magenta")
-    )
+    console.print(Panel.fit("[bold magenta]🌐  Approval Queue Web UI[/]", border_style="magenta"))
     console.print(f"\n  Starting server at [bold]http://{host}:{port}[/]\n")
 
     settings = get_settings()
@@ -640,21 +598,17 @@ def doctor() -> None:
         # ── 1. Python version ────────────────────────────────────────────────
         v = sys.version_info
         if v >= (3, 12):
-            checks.append(
-                (
-                    "Python Version",
-                    "✅",
-                    f"Python {sys.version.split()[0]} (≥ 3.12)",
-                )
-            )
+            checks.append((
+                "Python Version",
+                "✅",
+                f"Python {sys.version.split()[0]} (≥ 3.12)",
+            ))
         else:
-            checks.append(
-                (
-                    "Python Version",
-                    "❌",
-                    f"Python {sys.version.split()[0]} (< 3.12 required)",
-                )
-            )
+            checks.append((
+                "Python Version",
+                "❌",
+                f"Python {sys.version.split()[0]} (< 3.12 required)",
+            ))
             critical_fail = True
 
         # ── 2. LLM API key ─────────────────────────────────────────────────
@@ -663,21 +617,17 @@ def doctor() -> None:
             provider = settings.llm.provider or "unknown"
             api_key = settings.llm.api_key or os.environ.get("ANTHROPIC_API_KEY", "")
             if api_key:
-                checks.append(
-                    (
-                        "LLM API Key",
-                        "✅",
-                        f"Provider: {provider}, Key starts with: {api_key[:8]}…",
-                    )
-                )
+                checks.append((
+                    "LLM API Key",
+                    "✅",
+                    f"Provider: {provider}, Key starts with: {api_key[:8]}…",
+                ))
             else:
-                checks.append(
-                    (
-                        "LLM API Key",
-                        "❌",
-                        "No API key found (check GETAJOB_LLM__API_KEY or ANTHROPIC_API_KEY)",
-                    )
-                )
+                checks.append((
+                    "LLM API Key",
+                    "❌",
+                    "No API key found (check GETAJOB_LLM__API_KEY or ANTHROPIC_API_KEY)",
+                ))
                 critical_fail = True
         except Exception as exc:
             checks.append(("LLM API Key", "❌", f"Config error: {exc}"))
@@ -699,21 +649,17 @@ def doctor() -> None:
 
                 try:
                     await asyncio.wait_for(_probe_db(), timeout=5.0)
-                    checks.append(
-                        (
-                            "Database",
-                            "✅",
-                            f"Connected: {db.host}:{db.port}/{db.database}",
-                        )
-                    )
+                    checks.append((
+                        "Database",
+                        "✅",
+                        f"Connected: {db.host}:{db.port}/{db.database}",
+                    ))
                 except TimeoutError:
-                    checks.append(
-                        (
-                            "Database",
-                            "❌",
-                            f"Timed out after 5s: {db.host}:{db.port}/{db.database}",
-                        )
-                    )
+                    checks.append((
+                        "Database",
+                        "❌",
+                        f"Timed out after 5s: {db.host}:{db.port}/{db.database}",
+                    ))
                     critical_fail = True
                 except Exception as exc:
                     checks.append(("Database", "❌", f"Connection failed: {exc}"))
@@ -743,13 +689,11 @@ def doctor() -> None:
         if playwright_ok:
             checks.append(("Browser (Playwright)", "✅", "Playwright is installed"))
         else:
-            checks.append(
-                (
-                    "Browser (Playwright)",
-                    "❌",
-                    "Not installed - run: playwright install chromium",
-                )
-            )
+            checks.append((
+                "Browser (Playwright)",
+                "❌",
+                "Not installed - run: playwright install chromium",
+            ))
 
         # ── 6. Data directories ────────────────────────────────────────────
         data_dir = settings.data_dir if settings else Path.cwd() / "data"
@@ -813,8 +757,7 @@ def doctor() -> None:
         elif any(s in ("⚠", "❌") for _, s, _ in checks if s != "-"):
             console.print(
                 Panel(
-                    "[bold yellow]⚠  All critical checks passed,"
-                    " but some items need attention.[/]",
+                    "[bold yellow]⚠  All critical checks passed, but some items need attention.[/]",
                     border_style="yellow",
                     title="Doctor Summary",
                 )
@@ -822,8 +765,7 @@ def doctor() -> None:
         else:
             console.print(
                 Panel(
-                    "[bold green]✓  All checks passed![/]"
-                    "  Your system is ready to run GetAJob.",
+                    "[bold green]✓  All checks passed![/]  Your system is ready to run GetAJob.",
                     border_style="green",
                     title="Doctor Summary",
                 )
@@ -848,9 +790,7 @@ def setup(
     After tables are created, ensures required data directories exist and
     prints a summary of what was set up.
     """
-    console.print(
-        Panel.fit("[bold yellow]⚙️  First-Time Setup[/]", border_style="yellow")
-    )
+    console.print(Panel.fit("[bold yellow]⚙️  First-Time Setup[/]", border_style="yellow"))
 
     async def _run() -> None:
         engine = create_engine()
@@ -874,9 +814,7 @@ def setup(
             # Check for .env file.
             env_path = Path.cwd() / ".env"
             if env_path.exists():
-                console.print(
-                    f"  [green]✓[/] Environment file found: {env_path}"
-                )
+                console.print(f"  [green]✓[/] Environment file found: {env_path}")
             else:
                 env_template = Path.cwd() / "env.template"
                 if env_template.exists():
@@ -887,8 +825,7 @@ def setup(
                     )
                 else:
                     console.print(
-                        "  [yellow]⚠[/] No .env file found. "
-                        "Create one with your configuration."
+                        "  [yellow]⚠[/] No .env file found. Create one with your configuration."
                     )
 
             # ── Summary ───────────────────────────────────────────────────────
@@ -924,6 +861,7 @@ def show() -> None:
     Displays name, email, location, skills, and work authorisation
     from the database in a formatted table.
     """
+
     async def _run() -> None:
         engine = None
         try:
@@ -935,9 +873,7 @@ def show() -> None:
             profiles = await store.list_profiles(limit=1)
 
             if not profiles:
-                console.print(
-                    "[yellow]No profile configured. Run 'getajob init' to create one.[/]"
-                )
+                console.print("[yellow]No profile configured. Run 'getajob init' to create one.[/]")
                 return
 
             profile = profiles[0]
@@ -955,9 +891,7 @@ def show() -> None:
             else:
                 skills_str = "[dim]none[/]"
             table.add_row("Skills", skills_str)
-            table.add_row(
-                "Work Authorization", profile.work_authorization or "[dim]not set[/]"
-            )
+            table.add_row("Work Authorization", profile.work_authorization or "[dim]not set[/]")
 
             console.print(table)
         except Exception as exc:
@@ -976,6 +910,7 @@ def update() -> None:
     Shows current values; press Enter to keep a field unchanged.
     Only changed fields are sent to the database.
     """
+
     async def _run() -> None:
         engine = None
         try:
@@ -989,15 +924,12 @@ def update() -> None:
 
             if not profiles:
                 console.print(
-                    "[yellow]No profile configured."
-                    " Run 'getajob init' to create one first.[/]"
+                    "[yellow]No profile configured. Run 'getajob init' to create one first.[/]"
                 )
                 return
 
             current = profiles[0]
-            console.print(
-                Panel.fit("[bold cyan]✏️  Update Profile[/]", border_style="cyan")
-            )
+            console.print(Panel.fit("[bold cyan]✏️  Update Profile[/]", border_style="cyan"))
             console.print("[dim]Press Enter to keep the current value.[/]\n")
 
             # Interactive prompts with current values as defaults.
@@ -1005,14 +937,8 @@ def update() -> None:
             email = typer.prompt("  Email", default=current.email or "")
             location = typer.prompt("  Location", default=current.location or "")
 
-            current_skills_str = (
-                ", ".join(s.name for s in current.skills)
-                if current.skills
-                else ""
-            )
-            skills_str = typer.prompt(
-                "  Skills (comma-separated)", default=current_skills_str
-            )
+            current_skills_str = ", ".join(s.name for s in current.skills) if current.skills else ""
+            skills_str = typer.prompt("  Skills (comma-separated)", default=current_skills_str)
 
             work_auth = typer.prompt(
                 "  Work Authorization", default=current.work_authorization or ""
@@ -1038,9 +964,7 @@ def update() -> None:
                 # User explicitly cleared the skills field.
                 update_data["skills"] = []
 
-            if work_auth.strip() and work_auth.strip() != (
-                current.work_authorization or ""
-            ):
+            if work_auth.strip() and work_auth.strip() != (current.work_authorization or ""):
                 update_data["work_authorization"] = work_auth.strip()
             elif not work_auth.strip() and current.work_authorization:
                 update_data["work_authorization"] = ""
@@ -1067,9 +991,7 @@ def update() -> None:
                 "email": updated.email or "",
                 "location": updated.location or "",
                 "skills": (
-                    ", ".join(s.name for s in updated.skills)
-                    if updated.skills
-                    else "[dim]none[/]"
+                    ", ".join(s.name for s in updated.skills) if updated.skills else "[dim]none[/]"
                 ),
                 "work_authorization": updated.work_authorization or "[dim]not set[/]",
             }
@@ -1110,8 +1032,7 @@ def vector_list() -> None:
 
     if not yaml_path.exists():
         console.print(
-            "[yellow]No search vectors configured."
-            " Run 'getajob init' to set up defaults.[/]"
+            "[yellow]No search vectors configured. Run 'getajob init' to set up defaults.[/]"
         )
         raise typer.Exit()
 
@@ -1121,8 +1042,7 @@ def vector_list() -> None:
     vectors = data.get("search_vectors", [])
     if not vectors:
         console.print(
-            "[yellow]No search vectors configured."
-            " Run 'getajob init' to set up defaults.[/]"
+            "[yellow]No search vectors configured. Run 'getajob init' to set up defaults.[/]"
         )
         raise typer.Exit()
 
@@ -1134,9 +1054,7 @@ def vector_list() -> None:
 
     for vec in vectors:
         # Use explicit name or fall back to first two roles.
-        name = vec.get("name") or ", ".join(
-            vec.get("roles", ["(unnamed)"])[:2]
-        )
+        name = vec.get("name") or ", ".join(vec.get("roles", ["(unnamed)"])[:2])
         kw_list = vec.get("keywords", [])
         keywords = ", ".join(kw_list[:5])
         if len(kw_list) > 5:
@@ -1145,9 +1063,7 @@ def vector_list() -> None:
         loc_list = vec.get("locations", [])
         locations = ", ".join(loc_list) if loc_list else "[dim]any[/]"
 
-        is_remote = any(
-            loc.strip().lower() == "remote" for loc in loc_list
-        )
+        is_remote = any(loc.strip().lower() == "remote" for loc in loc_list)
         remote_str = "[green]✓[/]" if is_remote else "[red]✗[/]"
 
         table.add_row(name, keywords, locations, remote_str)
@@ -1166,24 +1082,16 @@ def vector_add() -> None:
     project_root = Path(__file__).resolve().parent.parent
     yaml_path = project_root / "config" / "settings.yaml"
 
-    console.print(
-        Panel.fit(
-            "[bold green]+  Add Search Vector[/]", border_style="green"
-        )
-    )
+    console.print(Panel.fit("[bold green]+  Add Search Vector[/]", border_style="green"))
 
     # ── Interactive prompts ────────────────────────────────────────────
     vec_name = typer.prompt("  Vector name")
-    console.print(
-        "  [dim]e.g. 'Backend Engineer' or 'Frontend Developer'[/]"
-    )
+    console.print("  [dim]e.g. 'Backend Engineer' or 'Frontend Developer'[/]")
 
     keywords_str = typer.prompt("  Keywords (comma-separated)")
     console.print("  [dim]e.g. python, go, kubernetes, aws[/]")
 
-    location = typer.prompt(
-        "  Location (optional, press Enter to skip)", default=""
-    )
+    location = typer.prompt("  Location (optional, press Enter to skip)", default="")
     remote = typer.confirm("  Remote only?", default=True)
 
     # ── Build vector ───────────────────────────────────────────────────
@@ -1192,9 +1100,7 @@ def vector_add() -> None:
     locations: list[str] = []
     if location.strip():
         locations.append(location.strip())
-    if remote and "remote" not in [
-        loc.strip().lower() for loc in locations
-    ]:
+    if remote and "remote" not in [loc.strip().lower() for loc in locations]:
         locations.insert(0, "remote")
 
     new_vector: dict[str, Any] = {
@@ -1233,13 +1139,9 @@ def vector_add() -> None:
         "Locations",
         ", ".join(locations) if locations else "[dim]any[/]",
     )
-    table.add_row(
-        "Remote", "[green]Yes[/]" if remote else "[red]No[/]"
-    )
+    table.add_row("Remote", "[green]Yes[/]" if remote else "[red]No[/]")
     console.print(table)
-    console.print(
-        f"\n[green]✓[/] Vector '[bold]{vec_name}[/]' added successfully."
-    )
+    console.print(f"\n[green]✓[/] Vector '[bold]{vec_name}[/]' added successfully.")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -1343,10 +1245,7 @@ def _check_settings() -> None:
     settings = get_settings()
 
     if settings.llm.provider == "mock":
-        console.print(
-            "[yellow]⚠ Using mock LLM client -- "
-            "no real AI calls will be made.[/]"
-        )
+        console.print("[yellow]⚠ Using mock LLM client -- no real AI calls will be made.[/]")
 
     if not settings.security.encryption_key:
         console.print(
@@ -1356,7 +1255,7 @@ def _check_settings() -> None:
         )
 
 
-def _print_result_table(result: dict, title: str = "Results") -> None:
+def _print_result_table(result: dict[str, Any], title: str = "Results") -> None:
     """Print a pipeline result dict as a Rich table.
 
     Args:

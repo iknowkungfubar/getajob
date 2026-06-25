@@ -20,7 +20,7 @@ from __future__ import annotations as _annotations
 
 import re
 import uuid
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -102,6 +102,7 @@ class TailoringAgent(BaseAgent):
         """Lazily initialised :class:`~profile_engine.profile_store.ProfileStore`."""
         if self._profile_store_val is None:
             from profile_engine.profile_store import ProfileStore
+
             self._profile_store_val = ProfileStore(self._engine)
         return self._profile_store_val
 
@@ -252,7 +253,7 @@ class TailoringAgent(BaseAgent):
             skills=len(result.get("skill_names", [])),
             experiences=len(result.get("work_experiences", [])),
         )
-        return result
+        return cast(dict[str, Any], result)
 
     def _format_profile_context(self, profile_data: dict[str, Any]) -> str:
         """Format the profile data into a structured block for the LLM prompt."""
@@ -279,9 +280,13 @@ class TailoringAgent(BaseAgent):
                     start = exp["start_date"]
                     end = exp.get("end_date") or "Present"
                     end_str = end.strftime("%Y-%m") if hasattr(end, "strftime") else end
-                    start_str = start.strftime("%Y-%m") if hasattr(start, "strftime") else str(start)
+                    start_str = (
+                        start.strftime("%Y-%m") if hasattr(start, "strftime") else str(start)
+                    )
                     date_str = f" ({start_str} - {end_str})"
-                lines.append(f"  - {exp.get('title', 'Role')} @ {exp.get('company', 'Company')}{date_str}")
+                lines.append(
+                    f"  - {exp.get('title', 'Role')} @ {exp.get('company', 'Company')}{date_str}"
+                )
                 if exp.get("description"):
                     lines.append(f"    {exp['description'][:200]}")
                 if exp.get("skills_used"):
@@ -358,7 +363,7 @@ class TailoringAgent(BaseAgent):
             "the candidate's experience to what the job requires.\n"
             "3. Keep it to 3-4 short paragraphs.\n"
             "4. Do NOT use any of these phrases:\n"
-            + "\n".join(f"   - \"{p}\"" for p in _CLICHE_PHRASES[:12])
+            + "\n".join(f'   - "{p}"' for p in _CLICHE_PHRASES[:12])
             + "\n"
             "5. Use natural, human writing - varied sentence lengths, "
             "specific details, no corporate boilerplate.\n"
@@ -425,14 +430,23 @@ class TailoringAgent(BaseAgent):
         }
         profile_skills = set(profile_data.get("skill_names", []))
         profile_titles = {
-            exp.get("title", "").lower().strip()
-            for exp in profile_data.get("work_experiences", [])
+            exp.get("title", "").lower().strip() for exp in profile_data.get("work_experiences", [])
         }
 
         # Check companies mentioned in the text.
         # This is a heuristic - we look for capitalized company-like words.
-        company_pattern = re.findall(r'(?<!\w)([A-Z][a-z]+(?:[\s-][A-Z][a-z]+)*)(?!\w)', generated_text)
-        known_brands = {"Summary", "Experience", "Skills", "Education", "Work", "History", "Profile"}
+        company_pattern = re.findall(
+            r"(?<!\w)([A-Z][a-z]+(?:[\s-][A-Z][a-z]+)*)(?!\w)", generated_text
+        )
+        known_brands = {
+            "Summary",
+            "Experience",
+            "Skills",
+            "Education",
+            "Work",
+            "History",
+            "Profile",
+        }
         for candidate in company_pattern:
             candidate_lower = candidate.lower().strip()
             if candidate_lower in profile_companies:
@@ -445,7 +459,24 @@ class TailoringAgent(BaseAgent):
             if candidate_lower in profile_titles:
                 continue
             # Flag unknown companies.
-            if candidate_lower not in {"the", "and", "for", "with", "from", "our", "your", "his", "her", "their", "its", "all", "department", "team", "role", "position"}:
+            if candidate_lower not in {
+                "the",
+                "and",
+                "for",
+                "with",
+                "from",
+                "our",
+                "your",
+                "his",
+                "her",
+                "their",
+                "its",
+                "all",
+                "department",
+                "team",
+                "role",
+                "position",
+            }:
                 # Only warn about proper nouns that look company-like.
                 pass  # Too noisy - disabled for now. A production version would use NER.
 
@@ -457,13 +488,15 @@ class TailoringAgent(BaseAgent):
         )
         for claimed_skill in skill_claim_pattern:
             claimed_clean = claimed_skill.strip().lower().rstrip(".,;!")
-            if claimed_clean and claimed_clean not in profile_skills and not any(
-                claimed_clean in ps or ps in claimed_clean for ps in profile_skills
+            if (
+                claimed_clean
+                and claimed_clean not in profile_skills
+                and not any(claimed_clean in ps or ps in claimed_clean for ps in profile_skills)
             ):
-                    warnings.append(
-                        f"Potential hallucination: '{claimed_clean}' is claimed in the "
-                        f"generated text but not found in the profile skill set"
-                    )
+                warnings.append(
+                    f"Potential hallucination: '{claimed_clean}' is claimed in the "
+                    f"generated text but not found in the profile skill set"
+                )
 
         return warnings
 
@@ -483,7 +516,7 @@ class TailoringAgent(BaseAgent):
                 warnings.append(f"Cliché phrase detected: '{phrase}'")
 
         # Check for repetitive bullet starters in resume.
-        bullet_starts = re.findall(r'^[-•*]\s+(\w+)', resume_text, re.MULTILINE)
+        bullet_starts = re.findall(r"^[-•*]\s+(\w+)", resume_text, re.MULTILINE)
         if len(bullet_starts) >= 5:
             freq: dict[str, int] = {}
             for word in bullet_starts:

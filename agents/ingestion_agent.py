@@ -24,7 +24,7 @@ import datetime
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import structlog
@@ -353,7 +353,7 @@ class IngestionAgent(BaseAgent):
             msg = f"Greenhouse request failed for company {company!r}: {exc}"
             raise IngestionError(msg) from exc
 
-        return data.get("jobs", [])
+        return cast(list[dict[str, Any]], data.get("jobs", []))
 
     # ── Lever Discovery ────────────────────────────────────────────────
 
@@ -407,7 +407,7 @@ class IngestionAgent(BaseAgent):
             raise IngestionError(msg) from exc
 
         # Lever returns an array at the top level.
-        return data if isinstance(data, list) else []
+        return cast(list[dict[str, Any]], data) if isinstance(data, list) else []
 
     # ── Generic job board discovery (future use) ────────────────────────
 
@@ -458,7 +458,9 @@ class IngestionAgent(BaseAgent):
             Listings not seen before.
         """
         unique: list[JobListingCreate] = []
-        cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=self._dedup_window_hours)
+        cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
+            hours=self._dedup_window_hours
+        )
 
         for listing in listings:
             key = (listing.company.lower().strip(), listing.title.lower().strip())
@@ -497,7 +499,9 @@ class IngestionAgent(BaseAgent):
                     )
                 )
                 if existing.scalar_one_or_none() is not None:
-                    self.logger.debug("Listing already exists - skipping save", source_id=listing_data.source_id)
+                    self.logger.debug(
+                        "Listing already exists - skipping save", source_id=listing_data.source_id
+                    )
                     return
 
             job = JobListing(
@@ -553,14 +557,14 @@ class IngestionAgent(BaseAgent):
         title = raw_job.get("title", raw_job.get("name", "Unknown Position"))
         job_id = raw_job.get("id", raw_job.get("postingId", ""))
         absolute_url = (
-            raw_job.get("absolute_url")
-            or raw_job.get("hostedUrl")
-            or raw_job.get("applyUrl")
+            raw_job.get("absolute_url") or raw_job.get("hostedUrl") or raw_job.get("applyUrl")
         )
 
         # Lever shape.
         if isinstance(raw_job.get("description"), dict):
-            description_text = raw_job["description"].get("text", raw_job["description"].get("plain", ""))
+            description_text = raw_job["description"].get(
+                "text", raw_job["description"].get("plain", "")
+            )
         else:
             description_text = raw_job.get("description", raw_job.get("content", ""))
 
@@ -600,16 +604,68 @@ class IngestionAgent(BaseAgent):
         """
         # Known skill keywords (lowercase).
         known = {
-            "python", "rust", "typescript", "javascript", "go", "java", "c++", "c#",
-            "kotlin", "swift", "scala", "ruby", "elixir", "sql", "graphql", "bash",
-            "django", "fastapi", "flask", "spring", "react", "angular", "vue",
-            "next.js", "node.js", "express", "pytorch", "tensorflow", "langchain",
-            "postgresql", "postgres", "mysql", "mongodb", "redis", "elasticsearch",
-            "dynamodb", "cassandra", "clickhouse", "bigquery", "snowflake",
-            "aws", "gcp", "azure", "kubernetes", "docker", "terraform", "ansible",
-            "helm", "prometheus", "grafana", "kafka", "rabbitmq", "nginx",
-            "distributed systems", "microservices", "grpc", "rest", "event-driven",
-            "machine learning", "deep learning", "nlp", "rag",
+            "python",
+            "rust",
+            "typescript",
+            "javascript",
+            "go",
+            "java",
+            "c++",
+            "c#",
+            "kotlin",
+            "swift",
+            "scala",
+            "ruby",
+            "elixir",
+            "sql",
+            "graphql",
+            "bash",
+            "django",
+            "fastapi",
+            "flask",
+            "spring",
+            "react",
+            "angular",
+            "vue",
+            "next.js",
+            "node.js",
+            "express",
+            "pytorch",
+            "tensorflow",
+            "langchain",
+            "postgresql",
+            "postgres",
+            "mysql",
+            "mongodb",
+            "redis",
+            "elasticsearch",
+            "dynamodb",
+            "cassandra",
+            "clickhouse",
+            "bigquery",
+            "snowflake",
+            "aws",
+            "gcp",
+            "azure",
+            "kubernetes",
+            "docker",
+            "terraform",
+            "ansible",
+            "helm",
+            "prometheus",
+            "grafana",
+            "kafka",
+            "rabbitmq",
+            "nginx",
+            "distributed systems",
+            "microservices",
+            "grpc",
+            "rest",
+            "event-driven",
+            "machine learning",
+            "deep learning",
+            "nlp",
+            "rag",
         }
 
         text_lower = text.lower()
@@ -655,7 +711,9 @@ class IngestionAgent(BaseAgent):
         # Check location match (if vector specifies locations).
         location_match = True
         if vector.locations:
-            location_match = any(loc.lower() in location or loc.lower() in combined for loc in vector.locations)
+            location_match = any(
+                loc.lower() in location or loc.lower() in combined for loc in vector.locations
+            )
 
         return (role_match or keyword_match) and location_match
 
@@ -687,24 +745,71 @@ class IngestionAgent(BaseAgent):
     def _default_greenhouse_companies(self) -> list[str]:
         """Return a list of notable companies using Greenhouse for ATS."""
         return [
-            "airbnb", "datadog", "discord", "dropbox", "gitlab",
-            "hashicorp", "hubspot", "instacart", "lyft", "notion",
-            "palantir", "pinterest", "reddit", "snowflake", "spotify",
-            "square", "stripe", "twitter", "uber", "vercel",
-            "zapier", "zendesk", "zillow",
+            "airbnb",
+            "datadog",
+            "discord",
+            "dropbox",
+            "gitlab",
+            "hashicorp",
+            "hubspot",
+            "instacart",
+            "lyft",
+            "notion",
+            "palantir",
+            "pinterest",
+            "reddit",
+            "snowflake",
+            "spotify",
+            "square",
+            "stripe",
+            "twitter",
+            "uber",
+            "vercel",
+            "zapier",
+            "zendesk",
+            "zillow",
         ]
 
     def _default_lever_companies(self) -> list[str]:
         """Return a list of notable companies using Lever for ATS."""
         return [
-            "asana", "atlassian", "box", "brex", "coinbase",
-            "confluent", "databricks", "deel", "doordash",
-            "doximity", "dbt-labs", "figma", "fivetran", "gong",
-            "grafana", "intercom", "looker", "mux", "netlify",
-            "okta", "opensea", "ora", "pagerduty", "ramp",
-            "retool", "revolut", "robinhood", "sentry", "shopify",
-            "squarespace", "substack", "supabase", "twilio",
-            "typeform", "vercel", "webflow", "wework",
+            "asana",
+            "atlassian",
+            "box",
+            "brex",
+            "coinbase",
+            "confluent",
+            "databricks",
+            "deel",
+            "doordash",
+            "doximity",
+            "dbt-labs",
+            "figma",
+            "fivetran",
+            "gong",
+            "grafana",
+            "intercom",
+            "looker",
+            "mux",
+            "netlify",
+            "okta",
+            "opensea",
+            "ora",
+            "pagerduty",
+            "ramp",
+            "retool",
+            "revolut",
+            "robinhood",
+            "sentry",
+            "shopify",
+            "squarespace",
+            "substack",
+            "supabase",
+            "twilio",
+            "typeform",
+            "vercel",
+            "webflow",
+            "wework",
         ]
 
     # ── Internal helpers ─────────────────────────────────────────────────
@@ -722,11 +827,15 @@ class IngestionAgent(BaseAgent):
         Returns:
             Number of entries loaded.
         """
-        cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=self._dedup_window_hours)
+        cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
+            hours=self._dedup_window_hours
+        )
 
         async with get_session(self._engine) as session:
             result = await session.execute(
-                select(JobListing).where(JobListing.created_at >= cutoff).order_by(JobListing.created_at.desc())
+                select(JobListing)
+                .where(JobListing.created_at >= cutoff)
+                .order_by(JobListing.created_at.desc())
             )
             rows = result.scalars().all()
             for row in rows:

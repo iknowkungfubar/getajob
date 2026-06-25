@@ -70,10 +70,7 @@ class ProfileStore:
         raw_salt = settings.security.encryption_salt
 
         if not raw_key:
-            msg = (
-                "Encryption key is not configured. "
-                "Set GETAJOB_SECURITY__ENCRYPTION_KEY in .env."
-            )
+            msg = "Encryption key is not configured. Set GETAJOB_SECURITY__ENCRYPTION_KEY in .env."
             raise ProfileError(msg)
 
         if not raw_salt:
@@ -81,6 +78,7 @@ class ProfileStore:
             # A static salt (previously all-zero) would enable rainbow-table
             # precomputation attacks against the PBKDF2 key derivation.
             import logging as _logging
+
             _logging.getLogger(__name__).warning(
                 "No encryption_salt configured — generated a random salt. "
                 "Set GETAJOB_SECURITY__ENCRYPTION_SALT in .env for a deterministic salt."
@@ -107,7 +105,9 @@ class ProfileStore:
 
     # ── CRUD ─────────────────────────────────────────────────────────────────
 
-    async def create_profile(self, data: ProfileCreate, session: AsyncSession | None = None) -> ProfileRead:
+    async def create_profile(
+        self, data: ProfileCreate, session: AsyncSession | None = None
+    ) -> ProfileRead:
         """Create a new profile with encrypted PII.
 
         Args:
@@ -160,7 +160,9 @@ class ProfileStore:
         async with get_session(self._engine) as s:
             return await _do(s)
 
-    async def get_profile(self, profile_id: uuid.UUID, session: AsyncSession | None = None) -> ProfileRead | None:
+    async def get_profile(
+        self, profile_id: uuid.UUID, session: AsyncSession | None = None
+    ) -> ProfileRead | None:
         """Retrieve a profile by ID.
 
         Returns:
@@ -170,7 +172,9 @@ class ProfileStore:
 
         async def _do(session: AsyncSession) -> ProfileRead | None:
             result = await session.execute(
-                select(UserProfile).where(UserProfile.id == profile_id, UserProfile.is_active.is_(True))
+                select(UserProfile).where(
+                    UserProfile.id == profile_id, UserProfile.is_active.is_(True)
+                )
             )
             profile = result.scalar_one_or_none()
             if profile is None:
@@ -206,7 +210,9 @@ class ProfileStore:
         async def _do(session: AsyncSession) -> ProfileRead:
             # Load current active profile.
             result = await session.execute(
-                select(UserProfile).where(UserProfile.id == profile_id, UserProfile.is_active.is_(True))
+                select(UserProfile).where(
+                    UserProfile.id == profile_id, UserProfile.is_active.is_(True)
+                )
             )
             current = result.scalar_one_or_none()
             if current is None:
@@ -223,10 +229,16 @@ class ProfileStore:
                 email=self._encrypt(data.email) if data.email else current.email,
                 phone=self._encrypt(data.phone) if data.phone else current.phone,
                 location=data.location if data.location is not None else current.location,
-                linkedin_url=data.linkedin_url if data.linkedin_url is not None else current.linkedin_url,
-                portfolio_url=data.portfolio_url if data.portfolio_url is not None else current.portfolio_url,
+                linkedin_url=data.linkedin_url
+                if data.linkedin_url is not None
+                else current.linkedin_url,
+                portfolio_url=data.portfolio_url
+                if data.portfolio_url is not None
+                else current.portfolio_url,
                 work_authorization=(
-                    data.work_authorization if data.work_authorization is not None else current.work_authorization
+                    data.work_authorization
+                    if data.work_authorization is not None
+                    else current.work_authorization
                 ),
                 skills=skills_json,
                 answers=data.answers if data.answers is not None else current.answers,
@@ -305,7 +317,9 @@ class ProfileStore:
 
     # ── Export / Import ───────────────────────────────────────────────────────
 
-    async def export_profile(self, profile_id: uuid.UUID, file_path: str | Path | None = None) -> dict[str, Any]:
+    async def export_profile(
+        self, profile_id: uuid.UUID, file_path: str | Path | None = None
+    ) -> dict[str, Any]:
         """Export a profile as a JSON-serialisable dict (PII decrypted).
 
         Args:
@@ -407,9 +421,7 @@ class ProfileStore:
         }
 
         async def _do(s: AsyncSession) -> dict[str, Any]:
-            pid: uuid.UUID | None = (
-                uuid.UUID(str(profile_id)) if profile_id is not None else None
-            )
+            pid: uuid.UUID | None = uuid.UUID(str(profile_id)) if profile_id is not None else None
 
             if pid is not None:
                 query = select(UserProfile).where(
@@ -440,9 +452,13 @@ class ProfileStore:
                     result["skills_by_category"].setdefault(category, []).append(name.lower())
 
             # Load work experiences.
-            exp_query = select(WorkExperience).where(
-                WorkExperience.profile_id == profile_row.id,
-            ).order_by(WorkExperience.start_date.desc())
+            exp_query = (
+                select(WorkExperience)
+                .where(
+                    WorkExperience.profile_id == profile_row.id,
+                )
+                .order_by(WorkExperience.start_date.desc())
+            )
 
             exps = (await s.execute(exp_query)).scalars().all()
             for exp_row in exps:
@@ -460,16 +476,16 @@ class ProfileStore:
                 if exp_row.start_date:
                     end = exp_row.end_date or datetime.datetime.now(datetime.UTC)
                     start = exp_row.start_date
-                    end = end.date() if isinstance(end, datetime.datetime) else end
-                    start = start.date() if isinstance(start, datetime.datetime) else start
-                    delta = (end - start).days / 365.25
+                    start_div = start.date() if isinstance(start, datetime.datetime) else start
+                    end_div = end.date() if isinstance(end, datetime.datetime) else end
+                    delta = (end_div - start_div).days / 365.25
                     result["experience_years"] += max(0.0, delta)
 
             # Merge skills from experience entries.
             for exp in exps:
                 if exp.skills_used:
-                    for s in exp.skills_used:
-                        sl = s.lower()
+                    for skill_name in exp.skills_used:
+                        sl = skill_name.lower()
                         if sl not in result["skill_names"]:
                             result["skill_names"].append(sl)
 

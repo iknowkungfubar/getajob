@@ -216,7 +216,10 @@ class GreenhouseFormHandler:
                 wa_el = await page.query_selector(_GREENHOUSE_SELECTORS["work_authorization"])
                 if wa_el:
                     values = _GREENHOUSE_DROPDOWN_VALUES.get("work_authorization", {})
-                    val = values.get(profile.work_authorization.lower().replace(" ", "_"), profile.work_authorization)
+                    val = values.get(
+                        profile.work_authorization.lower().replace(" ", "_"),
+                        profile.work_authorization,
+                    )
                     await filler.handle_dropdown("work_authorization", val)
                     result.fields_filled.append("work_authorization")
 
@@ -275,7 +278,9 @@ class GreenhouseFormHandler:
                 logger.debug("Field interaction failed", field=field_name, error=str(exc))
                 continue
 
-    async def _emit(self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int) -> None:
+    async def _emit(
+        self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int
+    ) -> None:
         """Emit a progress update if a callback was registered."""
         if cb is not None:
             from browser_engine.ats_profiles import FormFillingProgress

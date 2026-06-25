@@ -33,15 +33,16 @@ from core.state_machine import ApplicationState
 
 
 @compiles(UUID, "sqlite")
-def _compile_uuid_sqlite(_element: Any, _compiler: Any, **_kw: object) -> str:  # type: ignore[misc]
+def _compile_uuid_sqlite(_element: Any, _compiler: Any, **_kw: object) -> str:
     """Render PostgreSQL UUID as VARCHAR(36) for SQLite."""
     return "VARCHAR(36)"
 
 
 @compiles(JSONB, "sqlite")
-def _compile_jsonb_sqlite(_element: Any, _compiler: Any, **_kw: object) -> str:  # type: ignore[misc]
+def _compile_jsonb_sqlite(_element: Any, _compiler: Any, **_kw: object) -> str:
     """Render PostgreSQL JSONB as generic JSON for SQLite."""
     return "JSON"
+
 
 __all__: list[str] = [
     "Application",
@@ -126,7 +127,7 @@ class JobListing(_TimestampMixin, Base):
         String(2048),
         nullable=True,
     )
-    posted_date: Mapped[datetime.date | None] = mapped_column(
+    posted_date: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=False),
         nullable=True,
     )
@@ -138,7 +139,7 @@ class JobListing(_TimestampMixin, Base):
     salary_range: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
-        comment="e.g. {\"min\": 150000, \"max\": 200000, \"currency\": \"USD\"}",
+        comment='e.g. {"min": 150000, "max": 200000, "currency": "USD"}',
     )
     form_type: Mapped[str | None] = mapped_column(
         String(64),
@@ -273,11 +274,11 @@ class WorkExperience(_TimestampMixin, Base):
         String(256),
         nullable=False,
     )
-    start_date: Mapped[datetime.date | None] = mapped_column(
+    start_date: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=False),
         nullable=True,
     )
-    end_date: Mapped[datetime.date | None] = mapped_column(
+    end_date: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=False),
         nullable=True,
     )

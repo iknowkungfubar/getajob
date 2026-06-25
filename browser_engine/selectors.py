@@ -377,18 +377,38 @@ class SelectorRegistry:
 # ── Dynamic / vision-based discovery ────────────────────────────────────────────────
 
 _SEMANTIC_FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
-    "name_input": [re.compile(p, re.IGNORECASE) for p in [r"name", r"full.?name", r"first.?name", r"last.?name", r"your\s*name"]],
+    "name_input": [
+        re.compile(p, re.IGNORECASE)
+        for p in [r"name", r"full.?name", r"first.?name", r"last.?name", r"your\s*name"]
+    ],
     "email_input": [re.compile(p, re.IGNORECASE) for p in [r"email", r"e-?mail", r"your\s*email"]],
-    "phone_input": [re.compile(p, re.IGNORECASE) for p in [r"phone", r"mobile", r"telephone", r"phone\s*number"]],
-    "resume_upload": [re.compile(p, re.IGNORECASE) for p in [r"resume", r"cv", r"upload\s*resume", r"attach\s*resume"]],
-    "cover_letter_field": [re.compile(p, re.IGNORECASE) for p in [r"cover\s*letter", r"cover\s*note"]],
-    "submit_button": [re.compile(p, re.IGNORECASE) for p in [r"submit", r"apply", r"send\s*application"]],
-    "linkedin_url_input": [re.compile(p, re.IGNORECASE) for p in [r"linkedin", r"linkedin\s*url", r"linkedin\s*profile"]],
-    "work_authorization": [re.compile(p, re.IGNORECASE) for p in [r"work\s*authorization", r"visa", r"work\s*status", r"sponsorship"]],
+    "phone_input": [
+        re.compile(p, re.IGNORECASE) for p in [r"phone", r"mobile", r"telephone", r"phone\s*number"]
+    ],
+    "resume_upload": [
+        re.compile(p, re.IGNORECASE)
+        for p in [r"resume", r"cv", r"upload\s*resume", r"attach\s*resume"]
+    ],
+    "cover_letter_field": [
+        re.compile(p, re.IGNORECASE) for p in [r"cover\s*letter", r"cover\s*note"]
+    ],
+    "submit_button": [
+        re.compile(p, re.IGNORECASE) for p in [r"submit", r"apply", r"send\s*application"]
+    ],
+    "linkedin_url_input": [
+        re.compile(p, re.IGNORECASE)
+        for p in [r"linkedin", r"linkedin\s*url", r"linkedin\s*profile"]
+    ],
+    "work_authorization": [
+        re.compile(p, re.IGNORECASE)
+        for p in [r"work\s*authorization", r"visa", r"work\s*status", r"sponsorship"]
+    ],
 }
 
 
-async def dynamic_select(page: Page, field_hint: str, *, _context: str | None = None) -> ElementHandle | None:
+async def dynamic_select(
+    page: Page, field_hint: str, *, _context: str | None = None
+) -> ElementHandle | None:
     """Use text-label analysis to find a form field by semantic meaning.
 
     When CSS selectors fail, this function scans the page for visible labels
@@ -431,7 +451,9 @@ async def dynamic_select(page: Page, field_hint: str, *, _context: str | None = 
                 return nested
 
     # Fallback: scan all input/textarea elements and check nearby text.
-    inputs = await page.query_selector_all("input:not([type='hidden']):not([type='submit']), textarea, select")
+    inputs = await page.query_selector_all(
+        "input:not([type='hidden']):not([type='submit']), textarea, select"
+    )
     await page.inner_text("body")
 
     # If no label match succeeded, return the first input whose placeholder

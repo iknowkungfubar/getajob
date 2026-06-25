@@ -70,8 +70,11 @@ _CLAIM_PATTERNS: list[tuple[str, type[str]]] = [
     # Metrics (numbers that might be fabricated).
     (r"(?:over|more than|approximately|about)\s+(\d[\d,]*[kKmM]?%?)", str),
     # Specific achievements.
-    (r"(?:increased|decreased|reduced|improved|grew|boosted|generated|saved|delivered)"
-     r"\s+[A-Za-z]+\s+(?:by\s+)?(\d[\d,]*[kKmM]?%?)", str),
+    (
+        r"(?:increased|decreased|reduced|improved|grew|boosted|generated|saved|delivered)"
+        r"\s+[A-Za-z]+\s+(?:by\s+)?(\d[\d,]*[kKmM]?%?)",
+        str,
+    ),
 ]
 
 
@@ -235,11 +238,7 @@ class TruthValidator:
             if company not in profile_companies:
                 # Check partial match.
                 words = company.split()
-                partial_match = any(
-                    word in profile_companies
-                    for word in words
-                    if len(word) > 3
-                )
+                partial_match = any(word in profile_companies for word in words if len(word) > 3)
                 if not partial_match and company not in {"unknown", "private"}:
                     unverifiable.append(f"Company '{match.group(1)}' not found in profile")
 
@@ -270,10 +269,7 @@ class TruthValidator:
             if title not in profile_titles:
                 # Check for substring match (profile may have "Senior Engineer"
                 # vs. "lead engineer" in text).
-                partial = any(
-                    title in pt or pt in title
-                    for pt in profile_titles
-                )
+                partial = any(title in pt or pt in title for pt in profile_titles)
                 if not partial:
                     unverifiable.append(f"Job title '{match.group(1)}' not found in profile")
 
@@ -292,7 +288,9 @@ class TruthValidator:
         if profile_years == 0.0:
             return
 
-        matches = re.finditer(r"(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+experience", text, re.IGNORECASE)
+        matches = re.finditer(
+            r"(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+experience", text, re.IGNORECASE
+        )
         for match in matches:
             try:
                 claimed = int(match.group(1))
@@ -382,10 +380,30 @@ class TruthValidator:
             return
 
         known_skills = {
-            "python", "rust", "typescript", "javascript", "go", "java", "c++",
-            "sql", "graphql", "kubernetes", "docker", "aws", "gcp", "azure",
-            "terraform", "postgresql", "redis", "kafka", "react", "angular",
-            "node.js", "machine learning", "deep learning", "nlp",
+            "python",
+            "rust",
+            "typescript",
+            "javascript",
+            "go",
+            "java",
+            "c++",
+            "sql",
+            "graphql",
+            "kubernetes",
+            "docker",
+            "aws",
+            "gcp",
+            "azure",
+            "terraform",
+            "postgresql",
+            "redis",
+            "kafka",
+            "react",
+            "angular",
+            "node.js",
+            "machine learning",
+            "deep learning",
+            "nlp",
         }
 
         text_lower = text.lower()
@@ -399,9 +417,7 @@ class TruthValidator:
         # Check each found skill against profile.
         for skill in found_skills:
             if skill not in profile_skills:
-                unverifiable.append(
-                    f"Skill '{skill}' mentioned in text but not listed in profile"
-                )
+                unverifiable.append(f"Skill '{skill}' mentioned in text but not listed in profile")
 
     # ── Convenience ────────────────────────────────────────────────────────────
 

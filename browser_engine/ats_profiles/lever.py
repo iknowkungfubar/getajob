@@ -79,7 +79,9 @@ class LeverFormHandler:
 
         # Check for the distinctive Lever two-panel structure.
         try:
-            left_panel = await page.query_selector('[class*="application"], [class*="form-wrapper"]')
+            left_panel = await page.query_selector(
+                '[class*="application"], [class*="form-wrapper"]'
+            )
             if left_panel is not None:
                 # Lever forms typically have a visible h2 with "Contact" or "Apply".
                 heading = await page.query_selector(
@@ -228,7 +230,9 @@ class LeverFormHandler:
 
         return result
 
-    async def _emit(self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int) -> None:
+    async def _emit(
+        self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int
+    ) -> None:
         """Emit a progress update if a callback was registered."""
         if cb is not None:
             from browser_engine.ats_profiles import FormFillingProgress

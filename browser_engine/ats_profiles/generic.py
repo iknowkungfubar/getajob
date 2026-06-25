@@ -123,7 +123,9 @@ class GenericFormHandler:
                 if not selector:
                     continue
 
-                value = self._map_field_to_profile(field_name, field_type, profile, cover_letter_text)
+                value = self._map_field_to_profile(
+                    field_name, field_type, profile, cover_letter_text
+                )
 
                 if value is None:
                     result.fields_missing.append(field_name)
@@ -132,7 +134,9 @@ class GenericFormHandler:
                 try:
                     if field_type in ("file", "upload"):
                         if value and isinstance(value, str):
-                            await filler.handle_file_upload("resume_upload", value, selector=selector)
+                            await filler.handle_file_upload(
+                                "resume_upload", value, selector=selector
+                            )
                             result.fields_filled.append(field_name)
                     elif field_type in ("select", "dropdown"):
                         await filler.handle_dropdown(field_name, str(value), selector=selector)
@@ -236,7 +240,9 @@ class GenericFormHandler:
                     prompt=prompt,
                     system="You are a form-field extraction specialist. Return ONLY valid JSON.",
                 )
-                result_dict = json.loads(text.strip().removeprefix("```json").removesuffix("```").strip())
+                result_dict = json.loads(
+                    text.strip().removeprefix("```json").removesuffix("```").strip()
+                )
 
             return result_dict.get("fields", [])
 
@@ -343,7 +349,9 @@ class GenericFormHandler:
             "name": profile.name,
             "full_name": profile.name,
             "first_name": profile.name.split(" ", 1)[0] if profile.name else "",
-            "last_name": profile.name.split(" ", 1)[1] if profile.name and " " in profile.name else "",
+            "last_name": profile.name.split(" ", 1)[1]
+            if profile.name and " " in profile.name
+            else "",
             "email": profile.email,
             "e-mail": profile.email,
             "phone": profile.phone,
@@ -396,7 +404,9 @@ class GenericFormHandler:
 
         return None
 
-    async def _emit(self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int) -> None:
+    async def _emit(
+        self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int
+    ) -> None:
         """Emit a progress update if a callback was registered."""
         if cb is not None:
             from browser_engine.ats_profiles import FormFillingProgress

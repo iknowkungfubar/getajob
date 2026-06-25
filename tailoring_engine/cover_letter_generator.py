@@ -63,7 +63,9 @@ class CoverLetterResult(BaseModel):
     subject: str = Field(default="", description="Email subject line (if applicable)")
 
     # Anti-AI guardrail analysis.
-    anti_ai: AnalysisResult = Field(default_factory=lambda: AnalysisResult(score=0.0, flagged_phrases=[], suggestions=[]))
+    anti_ai: AnalysisResult = Field(
+        default_factory=lambda: AnalysisResult(score=0.0, flagged_phrases=[], suggestions=[])
+    )
 
     # Warnings.
     warnings: list[str] = Field(default_factory=list)
@@ -135,7 +137,9 @@ class CoverLetterGenerator:
             raise TailoringError(msg)
 
         # Build the prompt.
-        user_prompt = self._build_prompt(job_listing, profile, tone, style_instructions, company_context)
+        user_prompt = self._build_prompt(
+            job_listing, profile, tone, style_instructions, company_context
+        )
 
         # Generate.
         try:
@@ -217,20 +221,20 @@ class CoverLetterGenerator:
         # ── Tone instruction ─────────────────────────────────────────────
         tone_guide = {
             "professional": "Write in a professional, confident tone. "
-                            "Be direct but courteous.  Use standard paragraph structure.",
+            "Be direct but courteous.  Use standard paragraph structure.",
             "conversational": "Write in a warm, conversational tone as if writing to a colleague. "
-                              "Use contractions, varied sentence openings, and natural flow.",
+            "Use contractions, varied sentence openings, and natural flow.",
             "concise": "Keep the letter brief — no more than 3 short paragraphs. "
-                       "Get straight to the point.",
+            "Get straight to the point.",
         }
 
         sections.append(f"\n=== TONE ===\n{tone_guide.get(tone, tone_guide['professional'])}")
 
         sections.append(
             "\n=== RULES ===\n"
-            "- Never use these phrases:\n" +
-            "\n".join(f"  ✗ \"{p}\"" for p in sorted(_CLICHE_BLOCKLIST)[:8]) +
-            "\n- Start the letter with something specific to the role or company, not a generic intro\n"
+            "- Never use these phrases:\n"
+            + "\n".join(f'  ✗ "{p}"' for p in sorted(_CLICHE_BLOCKLIST)[:8])
+            + "\n- Start the letter with something specific to the role or company, not a generic intro\n"
             "- Show, don't tell — use specific examples from your experience\n"
             "- Keep it to 3-4 paragraphs maximum\n"
             "- Varie sentence structure and length naturally\n"
@@ -339,5 +343,3 @@ class CoverLetterGenerator:
             "- Keep the reader's attention: be specific, not generic\n"
             "- Never fabricate experience or qualifications"
         )
-
-

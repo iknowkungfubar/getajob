@@ -149,9 +149,7 @@ class OrchestratorAgent(BaseAgent):
 
         self.logger.info(
             "Orchestrator agent initialised",
-            active_profile=(
-                str(self._active_profile_id) if self._active_profile_id else None
-            ),
+            active_profile=(str(self._active_profile_id) if self._active_profile_id else None),
         )
 
     async def stop(self) -> None:
@@ -225,12 +223,15 @@ class OrchestratorAgent(BaseAgent):
 
         # ── Step 3: Ingestion ─────────────────────────────────────────────────
         ingestion = self._ingestion
-        try:
-            ingestion_result = await ingestion.run()
-            self._stats["jobs_discovered"] = ingestion_result.get("new_listings", 0)
-        except GetAJobError as exc:
-            self._stats["errors"] += 1
-            self.logger.error("Ingestion phase failed", error=str(exc))
+        if ingestion is None:
+            self.logger.warning("Ingestion agent not available -- skipping discovery")
+        else:
+            try:
+                ingestion_result = await ingestion.run()
+                self._stats["jobs_discovered"] = ingestion_result.get("new_listings", 0)
+            except GetAJobError as exc:
+                self._stats["errors"] += 1
+                self.logger.error("Ingestion phase failed", error=str(exc))
 
         # ── Step 4: Fetch unprocessed listings ────────────────────────────────
         listings = await self._fetch_unprocessed_listings()
@@ -242,17 +243,16 @@ class OrchestratorAgent(BaseAgent):
 
         # ── Steps 5-7: Analyse, create application, emit event ────────────────
         context = self._context
+        if context is None:
+            self.logger.warning("Context agent not available -- skipping analysis")
+            return dict(self._stats)
 
         for listing in listings:
             try:
                 analysis = await context.analyze(
                     job_id=str(listing.id),
                     job_description=self._extract_description_text(listing),
-                    profile_id=(
-                        str(self._active_profile_id)
-                        if self._active_profile_id
-                        else None
-                    ),
+                    profile_id=(str(self._active_profile_id) if self._active_profile_id else None),
                 )
                 self._stats["jobs_analyzed"] += 1
 
@@ -486,12 +486,15 @@ class OrchestratorAgent(BaseAgent):
                     )
             return ApplicationState.FAILED
 
+        tailoring = self._tailoring
+        if tailoring is None:
+            self.logger.warning("Tailoring agent not available -- skipping")
+            return ApplicationState.FAILED
+
         try:
-            tailoring_result = await self._tailoring.tailor(
+            tailoring_result = await tailoring.tailor(
                 job_listing_id=str(listing.id),
-                profile_id=(
-                    str(self._active_profile_id) if self._active_profile_id else None
-                ),
+                profile_id=(str(self._active_profile_id) if self._active_profile_id else None),
                 job_title=listing.title or "",
                 company=listing.company or "",
                 job_description=job_description,
@@ -637,8 +640,7 @@ class OrchestratorAgent(BaseAgent):
         browser_ok = _browser_available()
         if not browser_ok:
             self.logger.warning(
-                "Browser automation unavailable — exporting URLs for manual "
-                "submission",
+                "Browser automation unavailable — exporting URLs for manual submission",
                 count=len(staged),
             )
 
@@ -711,9 +713,7 @@ class OrchestratorAgent(BaseAgent):
                 )
                 db_app.state = ApplicationState.SUBMITTED
                 db_app.applied_at = datetime.datetime.now(datetime.UTC)
-                db_app.notes = (db_app.notes or "") + (
-                    "\n[auto] Submitted via browser automation."
-                )
+                db_app.notes = (db_app.notes or "") + ("\n[auto] Submitted via browser automation.")
                 session.add(
                     ApplicationEvent(
                         application_id=db_app.id,

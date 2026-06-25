@@ -84,7 +84,9 @@ class HumanSimulator:
 
     # ── Timing ─────────────────────────────────────────────────────────────────────
 
-    async def random_delay(self, min_ms: int = _DEFAULT_TYPING_MIN_MS, max_ms: int = _DEFAULT_TYPING_MAX_MS) -> None:
+    async def random_delay(
+        self, min_ms: int = _DEFAULT_TYPING_MIN_MS, max_ms: int = _DEFAULT_TYPING_MAX_MS
+    ) -> None:
         """Sleep for a random duration between *min_ms* and *max_ms*.
 
         Applies exponential jitter so that repeated calls produce a

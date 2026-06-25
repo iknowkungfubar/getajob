@@ -6,6 +6,8 @@ convenience access to the orchestrator and CLI runner.
 
 from __future__ import annotations as _annotations
 
+from typing import Any
+
 __version__ = "0.4.0"
 __all__: list[str] = [
     "__version__",
@@ -19,7 +21,7 @@ async def run_pipeline(
     tailor: bool = True,
     continuous: bool = False,
     interval_minutes: float = 15.0,
-) -> dict:
+) -> dict[str, Any]:
     """Programmatic entry point to run the GetAJob pipeline.
 
     Creates an :class:`~agents.orchestrator_agent.OrchestratorAgent`,

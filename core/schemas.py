@@ -82,7 +82,9 @@ class JobListingCreate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     source: str = Field(..., max_length=64, description="Source platform name")
-    source_id: str | None = Field(default=None, max_length=256, description="Source-internal identifier")
+    source_id: str | None = Field(
+        default=None, max_length=256, description="Source-internal identifier"
+    )
     company: str = Field(..., max_length=256)
     title: str = Field(..., max_length=512)
     location: str | None = Field(default=None, max_length=256)
@@ -137,8 +139,12 @@ class SkillSchema(BaseModel):
     """A single skill entry on a profile."""
 
     name: str = Field(..., max_length=128)
-    category: str | None = Field(default=None, max_length=64, description="e.g. language, framework, tool")
-    proficiency: str | None = Field(default=None, max_length=32, description="e.g. expert, proficient, familiar")
+    category: str | None = Field(
+        default=None, max_length=64, description="e.g. language, framework, tool"
+    )
+    proficiency: str | None = Field(
+        default=None, max_length=32, description="e.g. expert, proficient, familiar"
+    )
 
 
 class WorkExperienceSchema(BaseModel):
@@ -266,7 +272,9 @@ class ApplicationStateUpdate(BaseModel):
     """Input schema for transitioning an application to a new state."""
 
     target_state: ApplicationState
-    reason: str | None = Field(default=None, max_length=1024, description="Why the transition was made")
+    reason: str | None = Field(
+        default=None, max_length=1024, description="Why the transition was made"
+    )
     metadata_json: dict[str, Any] | None = None
 
 
@@ -329,8 +337,12 @@ class TailoringResponse(BaseModel):
     resume_text: str
     cover_letter: str | None = None
     matched_skills: list[str] = Field(default_factory=list)
-    match_score: float | None = Field(default=None, ge=0.0, le=1.0, description="Semantic match score")
-    warnings: list[str] = Field(default_factory=list, description="Anti-hallucination guardrail warnings")
+    match_score: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Semantic match score"
+    )
+    warnings: list[str] = Field(
+        default_factory=list, description="Anti-hallucination guardrail warnings"
+    )
 
 
 # ── Browser Submission Schemas ───────────────────────────────────────────────────
@@ -368,13 +380,18 @@ class RecruiterInfoSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     name: str | None = Field(default=None, description="Full name of the contact")
-    title: str | None = Field(default=None, description="Job title (e.g. Talent Acquisition Manager)")
+    title: str | None = Field(
+        default=None, description="Job title (e.g. Talent Acquisition Manager)"
+    )
     email: str | None = Field(default=None, description="Email address")
     linkedin_url: str | None = Field(default=None, description="LinkedIn profile URL")
     confidence_score: float = Field(
         default=0.0, ge=0.0, le=1.0, description="Confidence in this contact's accuracy"
     )
-    source: str = Field(default="unknown", description="Discovery method: job_listing, linkedin, website, email_pattern")
+    source: str = Field(
+        default="unknown",
+        description="Discovery method: job_listing, linkedin, website, email_pattern",
+    )
     company: str | None = Field(default=None, description="Company name")
     notes: str | None = Field(default=None, description="Additional context about this contact")
 

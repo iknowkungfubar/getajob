@@ -44,6 +44,7 @@ from core.state_machine import ApplicationState, StateMachineError, transition_s
 # The ORM models use PostgreSQL-specific types (UUID, JSONB).  These custom
 # `@compiles` directives tell SQLAlchemy how to render them against SQLite.
 
+
 @compiles(UUID, "sqlite")
 def _compile_uuid_sqlite(element: sa.TypeEngine, compiler: sa.Compiled, **kw: object) -> str:  # type: ignore[misc]  # noqa: ARG001
     """Render PostgreSQL UUID as VARCHAR(36) for SQLite."""
@@ -54,6 +55,7 @@ def _compile_uuid_sqlite(element: sa.TypeEngine, compiler: sa.Compiled, **kw: ob
 def _compile_jsonb_sqlite(element: sa.TypeEngine, compiler: sa.Compiled, **kw: object) -> str:  # type: ignore[misc]  # noqa: ARG001
     """Render PostgreSQL JSONB as generic JSON for SQLite."""
     return compiler.process(sa.JSON())
+
 
 __all__: list[str] = []
 
@@ -71,20 +73,18 @@ TEST_SKILLS: list[dict[str, str]] = [
 ]
 
 # Canned LLM response for the ContextAgent's requirement-extraction prompt.
-_CONTEXT_EXTRACTION_RESPONSE: str = json.dumps(
-    {
-        "required_skills": ["Python", "Rust", "Distributed Systems"],
-        "preferred_skills": ["Kubernetes", "Docker"],
-        "technologies": ["Python", "Rust", "Kubernetes", "PostgreSQL"],
-        "years_experience": 5,
-        "methodologies": ["Agile", "Scrum"],
-        "role_seniority": "senior",
-        "key_responsibilities": [
-            "Design and implement distributed systems",
-            "Lead technical architecture decisions",
-        ],
-    }
-)
+_CONTEXT_EXTRACTION_RESPONSE: str = json.dumps({
+    "required_skills": ["Python", "Rust", "Distributed Systems"],
+    "preferred_skills": ["Kubernetes", "Docker"],
+    "technologies": ["Python", "Rust", "Kubernetes", "PostgreSQL"],
+    "years_experience": 5,
+    "methodologies": ["Agile", "Scrum"],
+    "role_seniority": "senior",
+    "key_responsibilities": [
+        "Design and implement distributed systems",
+        "Lead technical architecture decisions",
+    ],
+})
 
 # Canned resume text (returned by the mock LLM for the resume prompt).
 _MOCK_RESUME_TEXT = """Senior Software Engineer — Turin
@@ -153,14 +153,12 @@ class RecordingEventBus(InMemoryEventBus):
     ) -> None:
         """Publish the event and record it."""
         await super().publish(event_type, data, **kwargs)
-        self.published_events.append(
-            {
-                "type": event_type,
-                "data": data or {},
-                "priority": kwargs.get("priority", EventPriority.NORMAL),
-                "source": kwargs.get("source", ""),
-            }
-        )
+        self.published_events.append({
+            "type": event_type,
+            "data": data or {},
+            "priority": kwargs.get("priority", EventPriority.NORMAL),
+            "source": kwargs.get("source", ""),
+        })
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -351,9 +349,7 @@ class TestFullPipeline:
             assert result["applications_created"] == 1, (
                 f"Expected 1 application created, got {result['applications_created']}"
             )
-            assert result["errors"] == 0, (
-                f"Expected 0 errors, got {result['errors']}"
-            )
+            assert result["errors"] == 0, f"Expected 0 errors, got {result['errors']}"
 
             # ── Step 5: Assert result counters include tailoring ──────────
             assert result["applications_tailored"] == 1, (
@@ -362,18 +358,14 @@ class TestFullPipeline:
 
             # ── Step 6: Assert database records ──────────────────────────
             async with get_session(db_engine) as session:
-                app_query = select(Application).where(
-                    Application.job_listing_id == seed_listing
-                )
+                app_query = select(Application).where(Application.job_listing_id == seed_listing)
                 app = (await session.execute(app_query)).scalar_one_or_none()
 
                 assert app is not None, "Application record was not created"
                 assert app.state == ApplicationState.PENDING_REVIEW, (
                     f"Expected application in PENDING_REVIEW, got {app.state.value}"
                 )
-                assert app.resume_text is not None, (
-                    "Resume should be populated after tailoring"
-                )
+                assert app.resume_text is not None, "Resume should be populated after tailoring"
                 # The mock resume text has a trailing newline from the
                 # triple-quoted string; the TailoringAgent strips whitespace
                 # from LLM output via .strip().
@@ -387,9 +379,7 @@ class TestFullPipeline:
                 # signature boilerplate (e.g. "Best,\\nName"), so the stored
                 # text may differ from the raw mock.  Check key content
                 # rather than exact match.
-                assert "Acme Team" in app.cover_letter, (
-                    "Cover letter should reference the company"
-                )
+                assert "Acme Team" in app.cover_letter, "Cover letter should reference the company"
                 assert "Your Needs" not in app.cover_letter, (
                     "Cover letter should avoid cliché placeholders"
                 )
@@ -405,9 +395,7 @@ class TestFullPipeline:
                 )
                 events = (await session.execute(events_query)).scalars().all()
 
-                assert len(events) >= 2, (
-                    f"Expected at least 2 transition events, got {len(events)}"
-                )
+                assert len(events) >= 2, f"Expected at least 2 transition events, got {len(events)}"
 
                 # Event 1: DISCOVERED → TAILORED
                 assert events[0].from_state == ApplicationState.DISCOVERED, (
@@ -477,9 +465,7 @@ class TestFullPipeline:
 
             # Verify no Application record was created.
             async with get_session(db_engine) as session:
-                app_query = select(Application).where(
-                    Application.job_listing_id == seed_listing
-                )
+                app_query = select(Application).where(Application.job_listing_id == seed_listing)
                 app = (await session.execute(app_query)).scalar_one_or_none()
                 assert app is None, (
                     "Application should not be created when match is below threshold"
@@ -597,9 +583,7 @@ class TestFullPipeline:
             assert result["applications_created"] >= 1, (
                 f"Expected at least 1 application, got {result['applications_created']}"
             )
-            assert result["errors"] == 0, (
-                f"Expected 0 errors, got {result['errors']}"
-            )
+            assert result["errors"] == 0, f"Expected 0 errors, got {result['errors']}"
 
         finally:
             await orchestrator.stop()
@@ -624,6 +608,4 @@ class TestFullPipeline:
             ApplicationState.DISCOVERED,
             ApplicationState.TAILORED,
         )
-        assert result == ApplicationState.TAILORED, (
-            f"Expected TAILORED, got {result}"
-        )
+        assert result == ApplicationState.TAILORED, f"Expected TAILORED, got {result}"

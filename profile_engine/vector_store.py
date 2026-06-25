@@ -45,7 +45,11 @@ class VectorStore:
         results = await store.semantic_search("distributed systems engineer", n_results=5)
     """
 
-    def __init__(self, persist_directory: str | Path | None = None, collection_name: str = _DEFAULT_COLLECTION) -> None:
+    def __init__(
+        self,
+        persist_directory: str | Path | None = None,
+        collection_name: str = _DEFAULT_COLLECTION,
+    ) -> None:
         self._persist_directory: Path
         if persist_directory is not None:
             self._persist_directory = Path(persist_directory)
@@ -75,9 +79,11 @@ class VectorStore:
 
         self._persist_directory.mkdir(parents=True, exist_ok=True)
 
+        from chromadb.config import Settings as ChromaSettings
+
         self._client = chromadb.PersistentClient(
             path=str(self._persist_directory),
-            settings=chromadb.Settings(
+            settings=ChromaSettings(
                 anonymized_telemetry=False,
                 allow_reset=True,
             ),
@@ -205,15 +211,13 @@ class VectorStore:
         output: list[dict[str, Any]] = []
         for i, chunk_id in enumerate(results["ids"][0]):
             metadata = results["metadatas"][0][i] if results["metadatas"] else {}
-            output.append(
-                {
-                    "id": chunk_id,
-                    "profile_id": metadata.get("profile_id", ""),
-                    "section": metadata.get("section", "unknown"),
-                    "text": results["documents"][0][i] if results["documents"] else "",
-                    "score": results["distances"][0][i] if results["distances"] else 0.0,
-                }
-            )
+            output.append({
+                "id": chunk_id,
+                "profile_id": metadata.get("profile_id", ""),
+                "section": metadata.get("section", "unknown"),
+                "text": results["documents"][0][i] if results["documents"] else "",
+                "score": results["distances"][0][i] if results["distances"] else 0.0,
+            })
 
         # Sort by ascending distance (closest first).
         output.sort(key=lambda r: r["score"])
@@ -232,7 +236,9 @@ class VectorStore:
             existing = self._collection.get(where={"profile_id": pid})
             if existing["ids"]:
                 self._collection.delete(ids=existing["ids"])
-                logger.debug("Deleted profile embeddings", profile_id=pid, count=len(existing["ids"]))
+                logger.debug(
+                    "Deleted profile embeddings", profile_id=pid, count=len(existing["ids"])
+                )
                 return len(existing["ids"])
         except Exception as exc:
             logger.warning("Error deleting profile embeddings", profile_id=pid, error=str(exc))
@@ -242,7 +248,7 @@ class VectorStore:
     async def collection_size(self) -> int:
         """Return the total number of chunks stored in the collection."""
         self._require_started()
-        return self._collection.count()
+        return int(self._collection.count())
 
     # ── Internal ──────────────────────────────────────────────────────────────
 

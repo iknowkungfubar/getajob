@@ -51,7 +51,11 @@ class DetectionResult:
 # ── URL patterns ────────────────────────────────────────────────────────────────────
 
 _URL_PATTERNS: list[tuple[re.Pattern[str], ATSProfile, float]] = [
-    (re.compile(r"myworkdayjobs\.com|wd5\.myworkdaysite\.com|workday\.com"), ATSProfile.WORKDAY, 0.95),
+    (
+        re.compile(r"myworkdayjobs\.com|wd5\.myworkdaysite\.com|workday\.com"),
+        ATSProfile.WORKDAY,
+        0.95,
+    ),
     (re.compile(r"boards\.greenhouse\.io"), ATSProfile.GREENHOUSE, 0.95),
     (re.compile(r"jobs\.lever\.co"), ATSProfile.LEVER, 0.95),
     (re.compile(r"linkedin\.com/jobs"), ATSProfile.LINKEDIN, 0.90),
@@ -99,9 +103,9 @@ _DOM_SIGNATURES: list[tuple[list[str], ATSProfile, float]] = [
     # LinkedIn
     (
         [
-            '[data-job-id]',
-            '[data-apply-state]',
-            '.jobs-apply-form',
+            "[data-job-id]",
+            "[data-apply-state]",
+            ".jobs-apply-form",
             '[class*="jobs-easy-apply"]',
         ],
         ATSProfile.LINKEDIN,
@@ -110,8 +114,8 @@ _DOM_SIGNATURES: list[tuple[list[str], ATSProfile, float]] = [
     # Indeed
     (
         [
-            '[data-tn-component]',
-            '.icl-ApplyForm',
+            "[data-tn-component]",
+            ".icl-ApplyForm",
             '[class*="indeed-apply"]',
             'meta[name="indeed"]',
         ],
@@ -121,7 +125,7 @@ _DOM_SIGNATURES: list[tuple[list[str], ATSProfile, float]] = [
     # Ashby
     (
         [
-            '[data-ashby]',
+            "[data-ashby]",
             'meta[name="ashby"]',
             'script[src*="ashby"]',
         ],
@@ -306,11 +310,15 @@ class ATSDetector:
                 # Collect version hints from meta tags / script sources.
                 version_hints = await self._extract_version_hints(page, profile)
 
-                return profile, effective_confidence, {
-                    "matched_selectors": list(matched_signals.keys()),
-                    "match_count": match_count,
-                    "version_hints": version_hints,
-                }
+                return (
+                    profile,
+                    effective_confidence,
+                    {
+                        "matched_selectors": list(matched_signals.keys()),
+                        "match_count": match_count,
+                        "version_hints": version_hints,
+                    },
+                )
 
         return None
 

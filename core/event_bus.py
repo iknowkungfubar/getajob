@@ -99,7 +99,9 @@ class EventBus(Protocol):
     protocol.
     """
 
-    async def publish(self, event_type: str, data: dict[str, Any] | None = None, **kwargs: Any) -> None:
+    async def publish(
+        self, event_type: str, data: dict[str, Any] | None = None, **kwargs: Any
+    ) -> None:
         """Publish an event to all subscribed handlers.
 
         Args:
@@ -147,11 +149,15 @@ class InMemoryEventBus:
         self._started = False
         logger.info("In-memory event bus stopped")
 
-    async def publish(self, event_type: str, data: dict[str, Any] | None = None, **kwargs: Any) -> None:
+    async def publish(
+        self, event_type: str, data: dict[str, Any] | None = None, **kwargs: Any
+    ) -> None:
         event = Event(event_type, data, **kwargs)
         handlers = self._subscribers.get(event_type, [])
         if not handlers:
-            logger.debug("Event published with no subscribers", event_type=event_type, event_id=event.id)
+            logger.debug(
+                "Event published with no subscribers", event_type=event_type, event_id=event.id
+            )
             return
 
         logger.debug("Dispatching event", event_type=event_type, handlers=len(handlers))
@@ -159,7 +165,9 @@ class InMemoryEventBus:
             try:
                 await handler(event)
             except Exception:
-                logger.exception("Handler failed for event", event_type=event_type, handler=handler.__name__)
+                logger.exception(
+                    "Handler failed for event", event_type=event_type, handler=handler.__name__
+                )
 
     async def subscribe(self, event_type: str, handler: EventHandler) -> Callable[[], None]:
         self._subscribers.setdefault(event_type, []).append(handler)
@@ -214,7 +222,9 @@ class RedisEventBus:
             await self._sub.aclose()
         logger.info("Redis event bus stopped")
 
-    async def publish(self, event_type: str, data: dict[str, Any] | None = None, **kwargs: Any) -> None:
+    async def publish(
+        self, event_type: str, data: dict[str, Any] | None = None, **kwargs: Any
+    ) -> None:
         event = Event(event_type, data, **kwargs)
         payload = json.dumps({"id": event.id, "type": event.type, "data": event.data})
         await self._pub.publish(event.type, payload)
@@ -222,7 +232,7 @@ class RedisEventBus:
 
     async def subscribe(self, event_type: str, handler: EventHandler) -> Callable[[], None]:
         self._subscribers.setdefault(event_type, []).append(handler)
-        await self._sub.subscribe(event_type)  # type: ignore[union-attr]
+        await self._sub.subscribe(event_type)
 
         def _unsubscribe() -> None:
             self._subscribers[event_type].remove(handler)
@@ -258,4 +268,6 @@ class RedisEventBus:
                     try:
                         await handler(event)
                     except Exception:
-                        logger.exception("Handler failed", event_type=event_type, handler=handler.__name__)
+                        logger.exception(
+                            "Handler failed", event_type=event_type, handler=handler.__name__
+                        )

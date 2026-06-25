@@ -42,7 +42,6 @@ _AI_CLICHE_BLOCKLIST: dict[str, str] = {
     "i am thrilled to apply": "i welcome the chance",
     "i am writing to express my keen interest": "i am interested",
     "please accept this letter as expression of": "",
-
     # Transitional / hedging
     "it is with great enthusiasm": "",
     "i am confident that my skills and experience": "my experience",
@@ -52,7 +51,6 @@ _AI_CLICHE_BLOCKLIST: dict[str, str] = {
     "i would welcome the opportunity": "i would welcome",
     "i would be thrilled to": "i would like to",
     "i am eager to bring": "i can bring",
-
     # Closer
     "thank you for your time and consideration": "thank you for your consideration",
     "thank you for considering my application": "thank you for your time",
@@ -60,7 +58,6 @@ _AI_CLICHE_BLOCKLIST: dict[str, str] = {
     "i look forward to the opportunity": "i hope for the chance",
     "please do not hesitate to contact me": "feel free to reach out",
     "i welcome the opportunity to discuss": "i would welcome a conversation",
-
     # Generic filler
     "the attached resume": "my resume",
     "please find attached": "i have attached",

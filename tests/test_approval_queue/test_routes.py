@@ -16,6 +16,7 @@ from core.config import GetAJobSettings, SecuritySettings
 
 # ── Fixture ─────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client() -> TestClient:
     """Yield a TestClient bound to the approval queue app.
@@ -78,7 +79,9 @@ class TestAuth:
         assert response.headers.get("location") == "/"
         assert "getajob_session" in response.cookies
 
-    def test_login_with_wrong_password(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_login_with_wrong_password(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """POST /login with an incorrect password stays on the login page.
 
         In ``production`` mode the server validates against a configured

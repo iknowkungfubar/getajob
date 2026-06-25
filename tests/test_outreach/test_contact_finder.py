@@ -57,8 +57,7 @@ class TestStrategyJobListing:
     async def test_extract_email_from_description(self) -> None:
         finder = ContactFinder(rate_limit=100)
         desc = (
-            "Please send your resume to jane.hiring@acme.com. "
-            "We are looking for a senior engineer."
+            "Please send your resume to jane.hiring@acme.com. We are looking for a senior engineer."
         )
         result = await finder._strategy_from_job_listing("Acme Corp", desc)
         assert result is not None
@@ -106,9 +105,7 @@ class TestStrategyEmailPatterns:
 
     def test_no_candidates_with_name_returns_none(self) -> None:
         finder = ContactFinder(rate_limit=100)
-        candidates = [
-            RecruiterInfo(email="jane@acme.com", confidence_score=0.8, company="Acme")
-        ]
+        candidates = [RecruiterInfo(email="jane@acme.com", confidence_score=0.8, company="Acme")]
         result = finder._strategy_email_patterns("Acme Corp", candidates)
         assert result is None
 
@@ -173,7 +170,9 @@ class TestSelectBestDedup:
         finder = ContactFinder(rate_limit=100)
         candidates = [
             RecruiterInfo(name="Jane", email="j@acme.com", confidence_score=0.5, company="Acme"),
-            RecruiterInfo(name="Jane (dup)", email="j@acme.com", confidence_score=0.4, company="Acme"),
+            RecruiterInfo(
+                name="Jane (dup)", email="j@acme.com", confidence_score=0.4, company="Acme"
+            ),
             RecruiterInfo(name="Bob", email="b@acme.com", confidence_score=0.6, company="Acme"),
         ]
         best = finder._select_best(candidates)

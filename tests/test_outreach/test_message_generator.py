@@ -173,6 +173,7 @@ class TestBuildPrompt:
         sample_profile: ProfileRead,
     ) -> None:
         from core.llm_client import MockLLMClient
+
         generator = MessageGenerator(
             system_prompt_path="/dev/null",
             llm_client=MockLLMClient(),

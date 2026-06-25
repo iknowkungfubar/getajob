@@ -178,6 +178,9 @@ dev = [
     "ruff>=0.7.0",
     "mypy>=1.13.0",
     "pre-commit>=4.0.0",
+    "types-pyyaml>=6.0.12.20260518",
+    "bandit>=1.8.3",
+    "pip-audit>=2.9.0",
 ]
 
 [tool.setuptools.packages.find]

@@ -161,6 +161,7 @@ class ContextAgent(BaseAgent):
         """Lazily initialised :class:`~profile_engine.profile_store.ProfileStore`."""
         if self._profile_store_val is None:
             from profile_engine.profile_store import ProfileStore
+
             self._profile_store_val = ProfileStore(self._engine)
         return self._profile_store_val
 
@@ -309,7 +310,9 @@ class ContextAgent(BaseAgent):
         }
 
         try:
-            result = await self._llm.generate_structured(prompt, schema, max_tokens=2048, temperature=0.3)
+            result = await self._llm.generate_structured(
+                prompt, schema, max_tokens=2048, temperature=0.3
+            )
         except Exception as exc:
             msg = f"LLM requirement extraction failed: {exc}"
             raise TailoringError(msg, details={"text_length": len(text)}) from exc
@@ -336,7 +339,7 @@ class ContextAgent(BaseAgent):
             skill_count=len(result.get("skill_names", [])),
             experience_years=round(result.get("experience_years", 0.0), 1),
         )
-        return result
+        return result  # type: ignore[no-any-return]  # ProfileStore returns dict[str, Any] but mypy sees Any
 
     # ── Step 3: Skill matching ─────────────────────────────────────────────
 
@@ -479,7 +482,9 @@ class ContextAgent(BaseAgent):
 
         # Low overall match.
         if match_score < 0.3:
-            warnings.append("Overall match score is low - consider whether this role is worth pursuing")
+            warnings.append(
+                "Overall match score is low - consider whether this role is worth pursuing"
+            )
 
         # Experience level mismatch.
         if requirements.years_experience:
@@ -493,11 +498,18 @@ class ContextAgent(BaseAgent):
         # Seniority mismatch.
         if requirements.role_seniority:
             seniority_map = {
-                "junior": 0, "mid": 1, "mid-level": 1, "senior": 2,
-                "staff": 3, "principal": 4, "lead": 2,
+                "junior": 0,
+                "mid": 1,
+                "mid-level": 1,
+                "senior": 2,
+                "staff": 3,
+                "principal": 4,
+                "lead": 2,
             }
             profile_years = profile.get("experience_years", 0.0)
-            expected_seniority = "senior" if profile_years >= 5 else "mid" if profile_years >= 2 else "junior"
+            expected_seniority = (
+                "senior" if profile_years >= 5 else "mid" if profile_years >= 2 else "junior"
+            )
             job_level = seniority_map.get(requirements.role_seniority.lower(), 1)
             profile_level = seniority_map.get(expected_seniority, 1)
             if job_level > profile_level + 1:
@@ -509,9 +521,7 @@ class ContextAgent(BaseAgent):
         # Many missing skills.
         missing_count = len(set(requirements.required_skills) - set(profile.get("skill_names", [])))
         if missing_count >= 3:
-            warnings.append(
-                f"Job requires {missing_count} skills not present in profile"
-            )
+            warnings.append(f"Job requires {missing_count} skills not present in profile")
 
         return warnings
 

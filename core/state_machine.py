@@ -8,6 +8,7 @@ allow-list, and invalid transitions raise :exc:`StateMachineError`.
 from __future__ import annotations as _annotations
 
 import enum
+from typing import Any
 
 import structlog
 
@@ -103,7 +104,7 @@ def transition_state(
     target: ApplicationState,
     *,
     application_id: str | None = None,
-    metadata: dict | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> ApplicationState:
     """Validate and return the *target* state if the transition is allowed.
 
@@ -147,7 +148,9 @@ def transition_state(
             f"Cannot transition from {current.value!r} to {target.value!r} "
             f"(allowed from {current.value!r}: {[s.value for s in allowed] or 'none — terminal state'})"
         )
-        raise StateMachineError(msg, details={"from_state": current.value, "target_state": target.value})
+        raise StateMachineError(
+            msg, details={"from_state": current.value, "target_state": target.value}
+        )
 
     if metadata:
         logger.debug(

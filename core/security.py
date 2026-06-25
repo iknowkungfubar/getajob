@@ -39,8 +39,8 @@ logger = structlog.get_logger(__name__)
 # ── Constants ────────────────────────────────────────────────────────────────────
 
 _AES_KEY_LENGTH = 32  # 256 bits
-_NONCE_LENGTH = 12    # 96 bits (recommended for GCM)
-_TAG_LENGTH = 16      # 128-bit authentication tag
+_NONCE_LENGTH = 12  # 96 bits (recommended for GCM)
+_TAG_LENGTH = 16  # 128-bit authentication tag
 _PBKDF2_ITERATIONS = 600_000  # OWASP 2023 recommendation
 _TOKEN_HASH_ALGORITHM = "sha256"
 _ENCODING = "utf-8"
@@ -187,7 +187,9 @@ def decrypt_value(ciphertext_b64: str, key: bytes) -> str:
 # ── Key Derivation ───────────────────────────────────────────────────────────────
 
 
-def derive_key(password: str, salt: bytes | None = None, *, iterations: int = _PBKDF2_ITERATIONS) -> tuple[bytes, bytes]:
+def derive_key(
+    password: str, salt: bytes | None = None, *, iterations: int = _PBKDF2_ITERATIONS
+) -> tuple[bytes, bytes]:
     """Derive a 256-bit AES key from *password* using PBKDF2-HMAC-SHA256.
 
     Args:
@@ -202,7 +204,9 @@ def derive_key(password: str, salt: bytes | None = None, *, iterations: int = _P
     if salt is None:
         salt = os.urandom(16)
 
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(_ENCODING), salt, iterations, dklen=_AES_KEY_LENGTH)
+    dk = hashlib.pbkdf2_hmac(
+        "sha256", password.encode(_ENCODING), salt, iterations, dklen=_AES_KEY_LENGTH
+    )
     return dk, salt
 
 

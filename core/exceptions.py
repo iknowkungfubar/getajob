@@ -7,6 +7,8 @@ implementation details.
 
 from __future__ import annotations as _annotations
 
+from typing import Any
+
 __all__: list[str] = [
     "BrowserError",
     "ConfigurationError",
@@ -23,7 +25,7 @@ __all__: list[str] = [
 class GetAJobError(Exception):
     """Base exception for all GetAJob platform errors."""
 
-    def __init__(self, message: str = "", *, details: dict | None = None) -> None:
+    def __init__(self, message: str = "", *, details: dict[str, Any] | None = None) -> None:
         self.details = details or {}
         super().__init__(message)
 

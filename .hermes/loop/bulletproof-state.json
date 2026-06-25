@@ -1,0 +1,86 @@
+{
+  "metadata": {
+    "session_id": "getajob-bulletproof-loop",
+    "loop_iteration": 0,
+    "timestamp_utc": "2026-06-25T04:00:00Z"
+  },
+  "goal": {
+    "statement": "Every quality gate passes, all state transitions tested, every failure path handled gracefully",
+    "stopping_conditions": [
+      "mypy --strict: 0 errors on core/, agents/, getajob/, approval_queue/",
+      "pre-commit run --all-files: passes all hooks",
+      "pip-audit: 0 known vulnerabilities",
+      "bandit: no high-severity issues in application code",
+      "Approve/reject integration tests exist and pass",
+      "60+ total tests",
+      "Ruff <= 12 errors (intentional only)",
+      "Coverage >= 50% across core modules"
+    ]
+  },
+  "work_items": [
+    {
+      "id": "BP-01",
+      "title": "Fix mypy strict errors (49 -> 0)",
+      "description": "Fix all 49 mypy --strict errors across core/, agents/, getajob/, approval_queue/",
+      "priority": 1,
+      "status": "pending",
+      "attempts": 0,
+      "max_attempts": 3,
+      "dependencies": []
+    },
+    {
+      "id": "BP-02",
+      "title": "Fix pre-commit hooks + dev tooling",
+      "description": "Create .secrets.baseline, add pip-audit/bandit to dev deps, fix detect-secrets config",
+      "priority": 2,
+      "status": "pending",
+      "attempts": 0,
+      "max_attempts": 3,
+      "dependencies": []
+    },
+    {
+      "id": "BP-03",
+      "title": "Approval queue approve/reject integration tests",
+      "description": "Add FastAPI TestClient tests for POST /api/applications/{id}/review with approve/reject/reset",
+      "priority": 3,
+      "status": "pending",
+      "attempts": 0,
+      "max_attempts": 3,
+      "dependencies": ["BP-01"]
+    },
+    {
+      "id": "BP-04",
+      "title": "Error recovery hardening",
+      "description": "Audit all external dependency calls (LLM, DB, browser) for proper error handling. Every failure path should produce a clean message, not a traceback",
+      "priority": 4,
+      "status": "pending",
+      "attempts": 0,
+      "max_attempts": 3,
+      "dependencies": []
+    },
+    {
+      "id": "BP-05",
+      "title": "Coverage improvement + remaining test gaps",
+      "description": "Add tests to bring core module coverage to 50%+. Focus on state_machine, database, config, event_bus",
+      "priority": 5,
+      "status": "pending",
+      "attempts": 0,
+      "max_attempts": 3,
+      "dependencies": ["BP-01"]
+    },
+    {
+      "id": "BP-06",
+      "title": "Documentation completeness audit",
+      "description": "Update docs/architecture.md, docs/deployment.md, README.md to reflect current state. Add missing docstrings to public APIs",
+      "priority": 6,
+      "status": "pending",
+      "attempts": 0,
+      "max_attempts": 3,
+      "dependencies": []
+    }
+  ],
+  "history": [],
+  "current_item": null,
+  "exit_status": "IN_PROGRESS",
+  "next_steps": "BP-01: Fix mypy strict errors"
+}

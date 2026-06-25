@@ -80,7 +80,8 @@ class FormFiller:
         cover_letter_text: str | None = None,
         *,
         submit: bool = False,
-        on_progress: Callable[[FormFillingProgress], Coroutine[Any, Any, None] | None] | None = None,
+        on_progress: Callable[[FormFillingProgress], Coroutine[Any, Any, None] | None]
+        | None = None,
     ) -> FormFillingResult:
         """Fill a job application form using the best available handler.
 
@@ -249,7 +250,9 @@ class FormFiller:
         self._logger.info("File uploaded", field=field_name, file=resolved_path)
         return True
 
-    async def handle_dropdown(self, field_name: str, value: str, *, selector: str | None = None) -> bool:
+    async def handle_dropdown(
+        self, field_name: str, value: str, *, selector: str | None = None
+    ) -> bool:
         """Select an option from a ``<select>`` dropdown.
 
         Args:
@@ -281,7 +284,9 @@ class FormFiller:
         self._logger.info("Dropdown selected", field=field_name, value=value)
         return True
 
-    async def handle_checkbox(self, field_name: str, checked: bool = True, *, selector: str | None = None) -> bool:
+    async def handle_checkbox(
+        self, field_name: str, checked: bool = True, *, selector: str | None = None
+    ) -> bool:
         """Check or un-check a checkbox (or radio button).
 
         Args:
@@ -311,7 +316,9 @@ class FormFiller:
 
         return True
 
-    async def handle_date_field(self, field_name: str, date_str: str, *, selector: str | None = None) -> bool:
+    async def handle_date_field(
+        self, field_name: str, date_str: str, *, selector: str | None = None
+    ) -> bool:
         """Fill a date input field.
 
         Args:
@@ -342,7 +349,9 @@ class FormFiller:
 
         return True
 
-    async def submit_application(self, *, wait_for_confirmation_s: float = 10.0) -> FormFillingResult:
+    async def submit_application(
+        self, *, wait_for_confirmation_s: float = 10.0
+    ) -> FormFillingResult:
         """Click the submit button and wait for a confirmation signal.
 
         Args:
@@ -372,7 +381,9 @@ class FormFiller:
         # Wait for navigation or confirmation.
         try:
             await self._page.wait_for_url(
-                lambda url: "confirmation" in url.lower() or "thank" in url.lower() or "success" in url.lower(),
+                lambda url: "confirmation" in url.lower()
+                or "thank" in url.lower()
+                or "success" in url.lower(),
                 timeout=int(wait_for_confirmation_s * 1000),
             )
         except Exception:

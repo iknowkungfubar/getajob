@@ -171,7 +171,9 @@ class WorkdayFormHandler:
             await self._advance(page, human)
 
             # Step 3: Additional info (LinkedIn, cover letter, etc.).
-            await self._fill_additional_step(page, human, filler, profile, cover_letter_text, result)
+            await self._fill_additional_step(
+                page, human, filler, profile, cover_letter_text, result
+            )
             await self._advance(page, human)
 
             # Step 4: Self-identification (optional).
@@ -329,10 +331,14 @@ class WorkdayFormHandler:
                 await human.sleep_between_actions()
 
                 # Fill visible experience fields.
-                await self._fill_visible_fields(page, human, {
-                    "job_title": exp.title,
-                    "company": exp.company,
-                })
+                await self._fill_visible_fields(
+                    page,
+                    human,
+                    {
+                        "job_title": exp.title,
+                        "company": exp.company,
+                    },
+                )
                 result.fields_filled.append(f"experience_{exp.company}")
 
     async def _handle_education_section(
@@ -357,15 +363,27 @@ class WorkdayFormHandler:
                 await human.sleep_between_actions()
 
                 try:
-                    school_field = edu.get("school", "") if isinstance(edu, dict) else getattr(edu, "school", "")
-                    degree_field = edu.get("degree", "") if isinstance(edu, dict) else getattr(edu, "degree", "")
+                    school_field = (
+                        edu.get("school", "")
+                        if isinstance(edu, dict)
+                        else getattr(edu, "school", "")
+                    )
+                    degree_field = (
+                        edu.get("degree", "")
+                        if isinstance(edu, dict)
+                        else getattr(edu, "degree", "")
+                    )
                 except (AttributeError, TypeError, KeyError):
                     continue
 
-                await self._fill_visible_fields(page, human, {
-                    "school": school_field,
-                    "degree": degree_field,
-                })
+                await self._fill_visible_fields(
+                    page,
+                    human,
+                    {
+                        "school": school_field,
+                        "degree": degree_field,
+                    },
+                )
                 result.fields_filled.append(f"education_{school_field}")
 
     async def _fill_self_id_step(
@@ -406,7 +424,9 @@ class WorkdayFormHandler:
                     await page.wait_for_load_state("networkidle", timeout=10_000)
                 return
 
-    async def _fill_visible_fields(self, page: Page, human: HumanSimulator, fields: dict[str, str]) -> None:
+    async def _fill_visible_fields(
+        self, page: Page, human: HumanSimulator, fields: dict[str, str]
+    ) -> None:
         """Fill visible input fields that match known labels."""
         for label, value in fields.items():
             if not value:
@@ -430,7 +450,9 @@ class WorkdayFormHandler:
         accessed via outer scope)."""
         self._logger.debug("Workday step", step=step, step_index=idx, total_steps=total)
 
-    async def _emit(self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int) -> None:
+    async def _emit(
+        self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int
+    ) -> None:
         """Emit a progress update if a callback was registered."""
         if cb is not None:
             from browser_engine.ats_profiles import FormFillingProgress

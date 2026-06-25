@@ -58,7 +58,7 @@ _INDEED_SELECTORS: dict[str, str] = {
     "radio_yes_no": 'div[class*="radio"] input[type="radio"]',
     "checkbox": 'input[type="checkbox"]',
     "text_input": 'input:not([type="hidden"]):not([type="submit"]):not([type="file"]):not([type="radio"]):not([type="checkbox"])',
-    "dropdown": 'select:not([multiple])',
+    "dropdown": "select:not([multiple])",
 }
 
 
@@ -303,7 +303,9 @@ class IndeedFormHandler:
                     await page.wait_for_load_state("networkidle", timeout=8_000)
                 return
 
-    async def _emit(self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int) -> None:
+    async def _emit(
+        self, cb: Any, result: FormFillingResult, step: str, idx: int, total: int
+    ) -> None:
         """Emit a progress update if a callback was registered."""
         if cb is not None:
             from browser_engine.ats_profiles import FormFillingProgress
