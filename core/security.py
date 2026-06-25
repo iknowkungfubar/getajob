@@ -45,6 +45,43 @@ _PBKDF2_ITERATIONS = 600_000  # OWASP 2023 recommendation
 _TOKEN_HASH_ALGORITHM = "sha256"
 _ENCODING = "utf-8"
 
+# Known test/insecure key values that should never reach production.
+# Matched by exact comparison and also by substring heuristics.
+_DEFAULT_OR_TEST_KEYS: list[bytes] = [
+    b"test-key-not-for-prod-32bytes!",
+    b"this-is-not-a-secure-key-!!!!!!!!",
+    b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    b"00000000000000000000000000000000",
+]
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────────
+
+
+def _is_likely_test_key(key: bytes) -> bool:
+    """Check whether *key* looks like a test or default value rather than a real key.
+
+    Heuristics include exact matches against known-insecure values, and
+    ASCII-decodable keys whose text contains common test markers or are
+    composed of a single repeated character (low entropy).
+    """
+    if key in _DEFAULT_OR_TEST_KEYS:
+        return True
+    if len(key) != _AES_KEY_LENGTH:
+        return False  # length validation happens elsewhere
+    # Keys that are all the same byte or all printable ASCII with test markers
+    # are almost certainly placeholders, not production-grade keys.
+    if len(set(key)) == 1:
+        return True
+    try:
+        text = key.decode("ascii")
+        markers = ("test", "not-for-prod", "default", "placeholder", "changeme", "example")
+        if any(marker in text.lower() for marker in markers):
+            return True
+    except (UnicodeDecodeError, ValueError):
+        pass
+    return False
+
 
 # ── Encryption / Decryption ──────────────────────────────────────────────────────
 
@@ -69,6 +106,13 @@ def encrypt_value(plaintext: str, key: bytes) -> str:
     if len(key) != _AES_KEY_LENGTH:
         msg = f"key must be exactly {_AES_KEY_LENGTH} bytes, got {len(key)}"
         raise SecurityError(msg)
+
+    if _is_likely_test_key(key):
+        logger.warning(
+            "Encryption key appears to be a test or default value — PII at rest is NOT "
+            "secure. Generate a proper key with generate_key() for production use.",
+            key_preview=base64.b64encode(key[:_TAG_LENGTH]).decode(),
+        )
 
     try:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -132,6 +176,9 @@ def decrypt_value(ciphertext_b64: str, key: bytes) -> str:
         aesgcm = AESGCM(key)
         plaintext = aesgcm.decrypt(nonce, ct, None)
         return plaintext.decode(_ENCODING)
+    except InvalidTag as exc:
+        msg = "Decryption failed — authentication tag mismatch (key is wrong or data corrupted)"
+        raise SecurityError(msg, details={"error": str(exc)}) from exc
     except Exception as exc:
         msg = "Decryption failed — key may be wrong or data corrupted"
         raise SecurityError(msg, details={"error": str(exc)}) from exc

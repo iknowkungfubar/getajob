@@ -1,0 +1,40 @@
+Read the following security-related files in /home/turin/getajob and implement security hardening:
+
+Files to read:
+- pyproject.toml (for dependency versions and security tooling)
+- .github/workflows/ci.yml (for security scanning jobs)
+- core/security.py (encryption implementation)
+- core/config.py (secret handling)
+
+Implement these changes:
+
+1. In pyproject.toml, add a [tool.bandit] section:
+   ```toml
+   [tool.bandit]
+   skips = ["B101", "B303", "B311", "B404", "B603", "B607"]
+   targets = ["core", "agents", "browser_engine", "profile_engine", "tailoring_engine", "outreach_engine", "approval_queue", "getajob"]
+   ```
+
+2. In .github/workflows/ci.yml, add a CodeQL analysis job that runs on push to main:
+   - Uses github/codeql-action/init@v3 with python as the language
+   - Uses github/codeql-action/analyze@v3
+   - Runs after lint and before tests
+
+3. In core/security.py, harden the encryption:
+   - Add a check in `encrypt_value` that validates the key is exactly 32 bytes (AES-256) before using it
+   - Add a warning log when encryption key is a default/test value (not a real production key)
+   - In `decrypt_value`, catch `InvalidTag` explicitly and re-raise as SecurityError (not bare Exception)
+
+4. Add a SECURITY.md file at the repo root documenting:
+   - Reporting vulnerabilities (email to security@getajob.dev)
+   - Supported versions (latest only)
+   - Security practices (encryption, auth, dependency management)
+   - Known security limitations
+
+5. Review pyproject.toml for any pinned dependency versions that are outdated.
+   Update minimum versions for these packages:
+   - aiohttp >= 3.14.1 (already done)
+   - pypdf >= 6.14.2 (already done)
+
+After changes, run: python3 -m pytest tests/ -q --tb=short
+Then run: ruff check . --statistics
