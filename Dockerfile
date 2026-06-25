@@ -33,9 +33,11 @@ WORKDIR /app
 # Install uv (fast drop-in for pip)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install dependencies (production only — no dev/test extras)
-COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev --frozen
+# Copy source first so uv can see the full package tree
+COPY . .
+
+# Sync dependencies and install the package in one step
+RUN uv sync --frozen
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
