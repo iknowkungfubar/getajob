@@ -1,12 +1,19 @@
-# GetAJob — Agentic Job Application Platform
+<p align="center">
+  <img src="assets/banner.svg" alt="GetAJob — Agentic Job Application Platform" width="100%" max-width="1280">
+</p>
 
-[![CI](https://github.com/iknowkungfubar/getajob/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/iknowkungfubar/getajob/actions/workflows/ci.yml)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+<p align="center">
+  <a href="https://github.com/iknowkungfubar/getajob/actions/workflows/ci.yml"><img src="https://github.com/iknowkungfubar/getajob/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="#"><img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python 3.12+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+  <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit" alt="pre-commit"></a>
+  <br>
+  <a href="https://github.com/iknowkungfubar/getajob/blob/main/CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.4.0-purple" alt="Version 0.4.0"></a>
+  <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/docker-ready-2496ED?logo=docker" alt="Docker"></a>
+</p>
 
-> **Automated job application platform for 2026.** Searches job boards, tailors resumes, generates cover letters, applies via browser automation, and performs recruiter outreach — with **human-in-the-loop validation** at every step. Targets **50 applications/day** across diverse platforms.
+> **Automated job application platform for 2026.** Searches job boards, tailors resumes, generates cover letters, applies via browser automation, and performs recruiter outreach — with **human-in-the-loop validation** at every step.
 
 ---
 

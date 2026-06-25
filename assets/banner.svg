@@ -1,0 +1,200 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0e27"/>
+      <stop offset="50%" stop-color="#12163a"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </linearGradient>
+    <!-- Accent gradient -->
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <!-- Green accent -->
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Soft glow for nodes -->
+    <filter id="nodeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Grid pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e2145" stroke-width="0.5" opacity="0.5"/>
+    </pattern>
+    <!-- Hexagon path -->
+    <path id="hexagon" d="M0 -12 L10.392 -6 L10.392 6 L0 12 L-10.392 6 L-10.392 -6 Z"/>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="360" fill="url(#bg)"/>
+  <rect width="1280" height="360" fill="url(#grid)"/>
+
+  <!-- Decorative gradient bar at top -->
+  <rect x="0" y="0" width="1280" height="3" fill="url(#accent)"/>
+
+  <!-- Network visualization - connection lines -->
+  <g stroke="url(#accent)" stroke-width="0.8" opacity="0.3">
+    <line x1="220" y1="130" x2="320" y2="200"/>
+    <line x1="320" y1="200" x2="220" y2="250"/>
+    <line x1="220" y1="130" x2="220" y2="250"/>
+    <line x1="120" y1="180" x2="220" y2="130"/>
+    <line x1="120" y1="180" x2="220" y2="250"/>
+    <line x1="120" y1="180" x2="320" y2="200"/>
+    <line x1="45" y1="195" x2="120" y2="180"/>
+  </g>
+
+  <!-- Small network nodes -->
+  <g fill="#8b5cf6" opacity="0.4">
+    <circle cx="45" cy="195" r="4"/>
+    <circle cx="120" cy="180" r="6"/>
+    <circle cx="220" cy="130" r="5"/>
+    <circle cx="320" cy="200" r="5"/>
+    <circle cx="220" cy="250" r="5"/>
+  </g>
+  <!-- Central glowing node -->
+  <circle cx="120" cy="180" r="8" fill="#8b5cf6" filter="url(#nodeGlow)" opacity="0.6"/>
+
+  <!-- Pipeline arrow flow -->
+  <g transform="translate(60, 300)" font-family="'SF Mono','SFMono-Regular','Cascadia Code','JetBrains Mono',monospace" font-size="11" fill="#4b5563">
+    <rect x="0" y="-10" width="80" height="22" rx="4" fill="#1e2145"/>
+    <text x="40" y="6" text-anchor="middle" fill="#6366f1" font-weight="bold">DISCOVER</text>
+    <path d="M90 1 L105 1 L100 -4 M105 1 L100 6" stroke="#4b5563" stroke-width="1.5" fill="none"/>
+
+    <rect x="115" y="-10" width="80" height="22" rx="4" fill="#1e2145"/>
+    <text x="155" y="6" text-anchor="middle" fill="#6366f1" font-weight="bold">ANALYZE</text>
+    <path d="M205 1 L220 1 L215 -4 M220 1 L215 6" stroke="#4b5563" stroke-width="1.5" fill="none"/>
+
+    <rect x="230" y="-10" width="80" height="22" rx="4" fill="#1e2145"/>
+    <text x="270" y="6" text-anchor="middle" fill="#22c55e" font-weight="bold">TAILOR</text>
+    <path d="M320 1 L335 1 L330 -4 M335 1 L330 6" stroke="#4b5563" stroke-width="1.5" fill="none"/>
+
+    <rect x="345" y="-10" width="90" height="22" rx="4" fill="#1e2145"/>
+    <text x="390" y="6" text-anchor="middle" fill="#f59e0b" font-weight="bold">REVIEW</text>
+    <path d="M445 1 L460 1 L455 -4 M460 1 L455 6" stroke="#4b5563" stroke-width="1.5" fill="none"/>
+
+    <rect x="470" y="-10" width="80" height="22" rx="4" fill="#1e2145"/>
+    <text x="510" y="6" text-anchor="middle" fill="#3b82f6" font-weight="bold">SUBMIT</text>
+  </g>
+
+  <!-- HITL badge -->
+  <rect x="570" y="290" width="42" height="18" rx="9" fill="#f59e0b" opacity="0.15"/>
+  <text x="591" y="303" text-anchor="middle" font-family="'SF Mono',monospace" font-size="8" fill="#f59e0b" font-weight="bold">HITL</text>
+
+  <!-- Main title -->
+  <text x="128" y="135" font-family="'Inter','Segoe UI','-apple-system',sans-serif" font-size="56" font-weight="800" fill="#f8fafc" letter-spacing="-1.5">
+    <tspan>Get</tspan>
+    <tspan fill="url(#accent)">A</tspan>
+    <tspan>Job</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <rect x="128" y="155" width="380" height="1" fill="#6366f1" opacity="0.3"/>
+  <text x="130" y="175" font-family="'Inter','Segoe UI',sans-serif" font-size="16" fill="#94a3b8" letter-spacing="0.5">
+    Agentic Job Application Platform
+  </text>
+
+  <!-- Agent badges -->
+  <g transform="translate(128, 200)" font-family="'SF Mono','SFMono-Regular',monospace" font-size="11">
+    <rect x="0" y="-8" width="95" height="24" rx="12" fill="#1e2145"/>
+    <circle cx="16" cy="4" r="4" fill="#6366f1"/>
+    <text x="50" y="8" text-anchor="middle" fill="#e2e8f0">Ingestion</text>
+
+    <rect x="105" y="-8" width="95" height="24" rx="12" fill="#1e2145"/>
+    <circle cx="121" cy="4" r="4" fill="#22c55e"/>
+    <text x="155" y="8" text-anchor="middle" fill="#e2e8f0">Tailoring</text>
+
+    <rect x="210" y="-8" width="105" height="24" rx="12" fill="#1e2145"/>
+    <circle cx="228" cy="4" r="4" fill="#3b82f6"/>
+    <text x="265" y="8" text-anchor="middle" fill="#e2e8f0">Browser</text>
+
+    <rect x="325" y="-8" width="90" height="24" rx="12" fill="#1e2145"/>
+    <circle cx="341" cy="4" r="4" fill="#f59e0b"/>
+    <text x="373" y="8" text-anchor="middle" fill="#e2e8f0">Outreach</text>
+  </g>
+
+  <!-- Right side: stats cards -->
+  <g transform="translate(680, 60)" font-family="'SF Mono','SFMono-Regular',monospace">
+    <!-- Card 1 -->
+    <rect x="0" y="0" width="200" height="85" rx="8" fill="#1e2145" opacity="0.6" stroke="#1e2145" stroke-width="1"/>
+    <text x="16" y="28" font-size="11" fill="#64748b" letter-spacing="1">AGENTIC LOOPS</text>
+    <text x="16" y="55" font-size="26" font-weight="bold" fill="#6366f1">4</text>
+    <text x="16" y="72" font-size="10" fill="#4b5563">Ingestion → Tailoring → Browser → Outreach</text>
+
+    <!-- Card 2 -->
+    <rect x="220" y="0" width="200" height="85" rx="8" fill="#1e2145" opacity="0.6" stroke="#1e2145" stroke-width="1"/>
+    <text x="236" y="28" font-size="11" fill="#64748b" letter-spacing="1">STATE MACHINE</text>
+    <text x="236" y="55" font-size="26" font-weight="bold" fill="#22c55e">7</text>
+    <text x="236" y="72" font-size="10" fill="#4b5563">DISCOVERED → TAILORED → PENDING_REVIEW → …</text>
+
+    <!-- Card 3 -->
+    <rect x="0" y="100" width="200" height="85" rx="8" fill="#1e2145" opacity="0.6" stroke="#1e2145" stroke-width="1"/>
+    <text x="16" y="128" font-size="11" fill="#64748b" letter-spacing="1">ATS PROFILES</text>
+    <text x="16" y="155" font-size="26" font-weight="bold" fill="#3b82f6">5</text>
+    <text x="16" y="172" font-size="10" fill="#4b5563">Greenhouse · Lever · LinkedIn · Indeed · Workday</text>
+
+    <!-- Card 4 -->
+    <rect x="220" y="100" width="200" height="85" rx="8" fill="#1e2145" opacity="0.6" stroke="#1e2145" stroke-width="1"/>
+    <text x="236" y="128" font-size="11" fill="#64748b" letter-spacing="1">TEST SUITE</text>
+    <text x="236" y="155" font-size="26" font-weight="bold" fill="#f59e0b">46</text>
+    <text x="236" y="172" font-size="10" fill="#4b5563">tests · all passing · SQLite + PostgreSQL</text>
+  </g>
+
+  <!-- Right side decorative pipeline -->
+  <g transform="translate(900, 230)" font-family="'SF Mono',monospace" font-size="9" fill="#4b5563">
+    <rect x="0" y="0" width="130" height="20" rx="4" fill="#1e2145"/>
+    <text x="10" y="14" fill="#6366f1" font-weight="bold">auto</text>
+    <text x="38" y="14" fill="#4b5563">discovery</text>
+    <circle cx="118" cy="10" r="3" fill="#6366f1" opacity="0.5"/>
+
+    <text x="10" y="44" fill="#6366f1" font-weight="bold">ai</text>
+    <text x="28" y="44" fill="#4b5563">tailoring</text>
+    <circle cx="118" cy="40" r="3" fill="#6366f1" opacity="0.5"/>
+
+    <text x="10" y="74" fill="#6366f1" font-weight="bold">hitl</text>
+    <text x="32" y="74" fill="#4b5563">approval</text>
+    <circle cx="118" cy="70" r="3" fill="#f59e0b" opacity="0.5"/>
+
+    <text x="10" y="104" fill="#6366f1" font-weight="bold">bot</text>
+    <text x="33" y="104" fill="#4b5563">submit</text>
+    <circle cx="118" cy="100" r="3" fill="#22c55e" opacity="0.5"/>
+  </g>
+
+  <!-- Version badge -->
+  <rect x="128" y="245" width="100" height="22" rx="11" fill="#1e2145" stroke="#6366f1" stroke-width="0.5"/>
+  <text x="178" y="260" text-anchor="middle" font-family="'SF Mono',monospace" font-size="11" fill="#6366f1" font-weight="bold">v0.4.0</text>
+
+  <!-- Python badge -->
+  <rect x="238" y="245" width="95" height="22" rx="11" fill="#1e2145" stroke="#22c55e" stroke-width="0.5"/>
+  <text x="285" y="260" text-anchor="middle" font-family="'SF Mono',monospace" font-size="11" fill="#22c55e" font-weight="bold">3.12+</text>
+
+  <!-- Docker badge -->
+  <rect x="343" y="245" width="95" height="22" rx="11" fill="#1e2145" stroke="#3b82f6" stroke-width="0.5"/>
+  <text x="390" y="260" text-anchor="middle" font-family="'SF Mono',monospace" font-size="11" fill="#3b82f6" font-weight="bold">Docker</text>
+
+  <!-- Bottom-right decorative element -->
+  <g opacity="0.08">
+    <circle cx="1200" cy="340" r="80" fill="none" stroke="#6366f1" stroke-width="1"/>
+    <circle cx="1200" cy="340" r="60" fill="none" stroke="#6366f1" stroke-width="0.5"/>
+    <circle cx="1200" cy="340" r="40" fill="none" stroke="#6366f1" stroke-width="0.3"/>
+  </g>
+
+  <!-- Bottom-left decorative element -->
+  <g opacity="0.06">
+    <circle cx="-20" cy="380" r="120" fill="none" stroke="#8b5cf6" stroke-width="1"/>
+  </g>
+</svg>
