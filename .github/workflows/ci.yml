@@ -69,7 +69,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Cache ruff analysis
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .ruff_cache
           key: ruff-${{ hashFiles('pyproject.toml', 'uv.lock') }}
@@ -104,7 +104,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Cache mypy
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .mypy_cache
           key: mypy-${{ hashFiles('pyproject.toml', 'uv.lock', '**/*.py') }}
