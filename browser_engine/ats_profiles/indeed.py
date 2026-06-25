@@ -9,7 +9,7 @@ multi-step modal within the job listing page.
 from __future__ import annotations as _annotations
 
 import contextlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from playwright.async_api import Page
@@ -23,6 +23,9 @@ from browser_engine.ats_profiles import (
 __all__: list[str] = [
     "IndeedFormHandler",
 ]
+
+if TYPE_CHECKING:
+    from browser_engine.human_simulator import HumanSimulator
 
 logger = structlog.get_logger(__name__)
 
@@ -100,7 +103,7 @@ class IndeedFormHandler:
         page: Page,
         profile: Any,
         resume_path: str,
-        cover_letter_text: str | None = None,
+        _cover_letter_text: str | None = None,
         **kwargs: Any,
     ) -> FormFillingResult:
         """Navigate Indeed's apply flow and fill the form.
@@ -256,8 +259,8 @@ class IndeedFormHandler:
     async def _fill_additional_questions(
         self,
         page: Page,
-        human: HumanSimulator,
-        profile: Any,
+        _human: HumanSimulator,
+        _profile: Any,
         result: FormFillingResult,
     ) -> None:
         """Fill dropdowns, radio buttons, and custom questions."""

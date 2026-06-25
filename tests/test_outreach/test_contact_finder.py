@@ -51,7 +51,7 @@ class TestValidateContact:
 
 
 class TestStrategyJobListing:
-    """Tests for strategy 1 — parsing the job description."""
+    """Tests for strategy 1 - parsing the job description."""
 
     @pytest.mark.asyncio
     async def test_extract_email_from_description(self) -> None:
@@ -68,7 +68,7 @@ class TestStrategyJobListing:
     @pytest.mark.asyncio
     async def test_extract_name_near_title(self) -> None:
         finder = ContactFinder(rate_limit=100)
-        desc = "Jane Smith – talent acquisition manager at Acme Corp"
+        desc = "Jane Smith - talent acquisition manager at Acme Corp"
         result = await finder._strategy_from_job_listing("Acme Corp", desc)
         assert result is not None
         assert result.name == "Jane Smith"
@@ -83,7 +83,7 @@ class TestStrategyJobListing:
 
 
 class TestStrategyEmailPatterns:
-    """Tests for strategy 4 — generating email addresses from patterns."""
+    """Tests for strategy 4 - generating email addresses from patterns."""
 
     def test_generates_email_from_name(self) -> None:
         finder = ContactFinder(rate_limit=100)

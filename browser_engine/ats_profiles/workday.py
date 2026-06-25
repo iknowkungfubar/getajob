@@ -10,7 +10,7 @@ from __future__ import annotations as _annotations
 
 import contextlib
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from playwright.async_api import Page
@@ -24,6 +24,10 @@ from browser_engine.ats_profiles import (
 __all__: list[str] = [
     "WorkdayFormHandler",
 ]
+
+if TYPE_CHECKING:
+    from browser_engine.form_filler import FormFiller
+    from browser_engine.human_simulator import HumanSimulator
 
 logger = structlog.get_logger(__name__)
 
@@ -199,7 +203,7 @@ class WorkdayFormHandler:
         self,
         page: Page,
         human: HumanSimulator,
-        filler: FormFiller,
+        _filler: FormFiller,
         profile: Any,
         result: FormFillingResult,
     ) -> None:
@@ -238,7 +242,7 @@ class WorkdayFormHandler:
         self,
         page: Page,
         human: HumanSimulator,
-        filler: FormFiller,
+        _filler: FormFiller,
         resume_path: str,
     ) -> bool:
         """Upload resume on the resume step."""
@@ -274,7 +278,7 @@ class WorkdayFormHandler:
         self,
         page: Page,
         human: HumanSimulator,
-        filler: FormFiller,
+        _filler: FormFiller,
         profile: Any,
         cover_letter_text: str | None,
         result: FormFillingResult,
@@ -368,7 +372,7 @@ class WorkdayFormHandler:
         self,
         page: Page,
         human: HumanSimulator,
-        filler: FormFiller,
+        _filler: FormFiller,
         result: FormFillingResult,
     ) -> None:
         """Fill self-identification questions (gender, race, veteran, disability)."""
@@ -421,7 +425,7 @@ class WorkdayFormHandler:
                     logger.debug("Field interaction failed", field=label, error=str(exc))
                     continue
 
-    async def _emit_on(self, result: FormFillingResult, step: str, idx: int, total: int) -> None:
+    async def _emit_on(self, _result: FormFillingResult, step: str, idx: int, total: int) -> None:
         """Helper for progress emission (called from context where on_progress is
         accessed via outer scope)."""
         self._logger.debug("Workday step", step=step, step_index=idx, total_steps=total)

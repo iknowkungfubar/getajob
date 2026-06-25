@@ -1,4 +1,4 @@
-"""Ingestion Agent — Job Discovery & Ingestion Engine (Module 1).
+"""Ingestion Agent - Job Discovery & Ingestion Engine (Module 1).
 
 Discovers job listings from multiple sources (LinkedIn, Indeed, Greenhouse,
 Workday, Lever) by executing search vectors defined in ``config/settings.yaml``.
@@ -225,14 +225,14 @@ class IngestionAgent(BaseAgent):
                         roles=vector.roles[:3],
                     )
                     self.logger.info(
-                        "Browser-based discovery not yet available — stub",
+                        "Browser-based discovery not yet available - stub",
                         source=source,
                         module="browser_engine.ats_profiles",
                     )
                     continue
 
                 if source not in _API_SOURCES:
-                    self.logger.warning("Unknown source — skipping", source=source)
+                    self.logger.warning("Unknown source - skipping", source=source)
                     continue
 
                 try:
@@ -440,8 +440,8 @@ class IngestionAgent(BaseAgent):
             raise IngestionError(msg) from exc
 
         # TODO: Implement HTML/job-listing microdata parsing.
-        # For now, return empty — the Browser Engine will handle this.
-        self.logger.info("Generic discovery — HTML parsing not yet implemented", url=url)
+        # For now, return empty - the Browser Engine will handle this.
+        self.logger.info("Generic discovery - HTML parsing not yet implemented", url=url)
         return []
 
     # ── Deduplication ───────────────────────────────────────────────────
@@ -497,7 +497,7 @@ class IngestionAgent(BaseAgent):
                     )
                 )
                 if existing.scalar_one_or_none() is not None:
-                    self.logger.debug("Listing already exists — skipping save", source_id=listing_data.source_id)
+                    self.logger.debug("Listing already exists - skipping save", source_id=listing_data.source_id)
                     return
 
             job = JobListing(
@@ -673,8 +673,8 @@ class IngestionAgent(BaseAgent):
 
     async def _resolve_companies_for_keywords(
         self,
-        source: str,
-        vector: SearchVectorConfig,
+        _source: str,
+        _vector: SearchVectorConfig,
     ) -> list[str]:
         """Query the source API to find companies with matching jobs.
 
@@ -712,7 +712,7 @@ class IngestionAgent(BaseAgent):
     def _require_http_client(self) -> httpx.AsyncClient:
         """Return the HTTP client, raising if not initialised."""
         if self._http_client is None:
-            msg = "HTTP client not initialised — call await agent.start() first."
+            msg = "HTTP client not initialised - call await agent.start() first."
             raise IngestionError(msg)
         return self._http_client
 
@@ -755,7 +755,7 @@ class IngestionAgent(BaseAgent):
         raw_vectors = overlay.get("search_vectors", [])
 
         if not raw_vectors:
-            self.logger.info("No search vectors in config — using built-in defaults")
+            self.logger.info("No search vectors in config - using built-in defaults")
             return [
                 SearchVectorConfig(
                     roles=["senior software engineer", "staff engineer"],
@@ -772,7 +772,7 @@ class IngestionAgent(BaseAgent):
                 vector = SearchVectorConfig(**raw)
                 vectors.append(vector)
             except Exception as exc:
-                self.logger.warning("Invalid search vector — skipping", error=str(exc))
+                self.logger.warning("Invalid search vector - skipping", error=str(exc))
 
         return vectors
 
@@ -826,7 +826,7 @@ def _extract_salary(raw_job: dict[str, Any]) -> dict[str, Any] | None:
 
     if isinstance(salary, str):
         # Free-text: "$150k - $200k" etc.
-        match = re.search(r"(\d{3,})\s*k?\s*[-–to]+\s*(\d{3,})\s*k?", salary, re.IGNORECASE)
+        match = re.search(r"(\d{3,})\s*k?\s*[--to]+\s*(\d{3,})\s*k?", salary, re.IGNORECASE)
         if match:
             try:
                 return {

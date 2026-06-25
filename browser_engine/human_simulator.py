@@ -97,7 +97,7 @@ class HumanSimulator:
     async def sleep_between_actions(self) -> None:
         """Pause for a random duration simulating reading / thinking time.
 
-        Typical range is 1–3 seconds, mimicking the time a human spends
+        Typical range is 1-3 seconds, mimicking the time a human spends
         scanning the next section of a form.
         """
         duration = random.uniform(self._pause_min_s, self._pause_max_s)
@@ -130,7 +130,7 @@ class HumanSimulator:
         if target_element is not None:
             box = await target_element.bounding_box()
             if box is None:
-                self._logger.warning("Cannot resolve bounding box for target — skipping movement")
+                self._logger.warning("Cannot resolve bounding box for target - skipping movement")
                 return
             end_x = box["x"] + box["width"] / 2
             end_y = box["y"] + box["height"] / 2
@@ -138,7 +138,7 @@ class HumanSimulator:
             end_x = float(target_x)
             end_y = float(target_y)
         else:
-            self._logger.debug("No target specified — moving to random viewport position")
+            self._logger.debug("No target specified - moving to random viewport position")
             viewport = page.viewport_size
             end_x = random.uniform(0, viewport["width"] if viewport else 800)
             end_y = random.uniform(0, viewport["height"] if viewport else 600)
@@ -188,7 +188,7 @@ class HumanSimulator:
     ) -> None:
         """Type *text* into a form field with human-like timing and typos.
 
-        Each keystroke is delayed by 50–120 ms.  With low probability
+        Each keystroke is delayed by 50-120 ms.  With low probability
         (``typo_probability``) a nearby-key typo is typed and then corrected
         with Backspace, simulating natural typing errors.
 

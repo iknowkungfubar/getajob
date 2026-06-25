@@ -4,7 +4,7 @@ Creates and configures the FastAPI ASGI app with Jinja2 templating, static
 file serving, session-based single-user auth, CORS middleware, and security
 headers.
 
-The app is designed for **local single-user operation** — auth is a simple
+The app is designed for **local single-user operation** - auth is a simple
 cookie-based session check, not OAuth.  In production you can front this
 with a reverse proxy (nginx / Caddy) for TLS and optional basic auth.
 """
@@ -67,12 +67,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: initialise and tear down connections."""
     state = AppState()
 
-    # Create the database engine (lazy — pool opened on first query).
+    # Create the database engine (lazy - pool opened on first query).
     try:
         state.db_engine = create_engine()
         logger.info("Database engine created for approval queue")
     except Exception:
-        logger.warning("Database engine creation failed — running in UI-only mode")
+        logger.warning("Database engine creation failed - running in UI-only mode")
 
     # Initialise the event bus.
     await state.event_bus.start()
@@ -112,7 +112,7 @@ app = FastAPI(
     redoc_url=None,
 )
 
-# CORS — restrict to localhost origins for safety.
+# CORS - restrict to localhost origins for safety.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -130,7 +130,7 @@ app.add_middleware(
 if _STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 else:
-    logger.warning("Static directory not found — UI may lack styling", path=str(_STATIC_DIR))
+    logger.warning("Static directory not found - UI may lack styling", path=str(_STATIC_DIR))
 
 
 # ── Security headers middleware ─────────────────────────────────────────────
@@ -306,7 +306,7 @@ def _fallback_login_html(error: str = "") -> Response:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GetAJob — Login</title>
+    <title>GetAJob - Login</title>
     <style>
         body {{ background:#1a1b2e; color:#e0e0e0; font-family:system-ui,sans-serif;
                display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }}

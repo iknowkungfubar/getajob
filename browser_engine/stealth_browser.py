@@ -1,8 +1,8 @@
 """Stealth browser wrapper for undetectable automation.
 
 The :class:`StealthBrowser` wraps ``browser_use.Browser`` and applies a suite
-of anti-detection measures — canvas fingerprint randomisation, WebGL noise,
-navigator property patches — so that job portals cannot easily distinguish
+of anti-detection measures - canvas fingerprint randomisation, WebGL noise,
+navigator property patches - so that job portals cannot easily distinguish
 automated traffic from a genuine human user.
 """
 
@@ -23,9 +23,14 @@ from core.exceptions import BrowserError
 __all__: list[str] = [
     "STEALTH_INIT_SCRIPT",
     "StealthBrowser",
+    "is_available",
 ]
 
 logger = structlog.get_logger(__name__)
+
+# ── Availability check (re-exported) ─────────────────────────────────────────────────
+
+from browser_engine._availability import is_available  # noqa: E402
 
 # ── Stealth initialisation script ───────────────────────────────────────────────────
 
@@ -70,7 +75,7 @@ HTMLCanvasElement.prototype.toDataURL = function (...args) {
 
 const getParameter = WebGLRenderingContext.prototype.getParameter;
 WebGLRenderingContext.prototype.getParameter = function (param) {
-    if (param === 37445) return 'Intel Inc.';          // RENDERER — spoof
+    if (param === 37445) return 'Intel Inc.';          // RENDERER - spoof
     if (param === 37446) return 'Intel Iris OpenGL Engine';
     return getParameter.apply(this, arguments);
 };
@@ -117,7 +122,7 @@ class StealthBrowser:
             The underlying ``browser_use.Browser`` instance.
         """
         if self._browser is not None and self.is_running:
-            self._logger.warning("Browser already running — closing before re-launch")
+            self._logger.warning("Browser already running - closing before re-launch")
             await self.close()
 
         configs: list[BrowserConfig] = [
@@ -189,7 +194,7 @@ class StealthBrowser:
             BrowserError: If the browser is not running.
         """
         if self._playwright_browser is None:
-            msg = "Browser is not running — call launch() first"
+            msg = "Browser is not running - call launch() first"
             raise BrowserError(msg)
 
         # Merge configured viewport with caller overrides.

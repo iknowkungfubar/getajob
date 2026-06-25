@@ -9,7 +9,6 @@ to the correct implementation after detection.
 from __future__ import annotations as _annotations
 
 import enum
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -23,7 +22,13 @@ __all__: list[str] = [
     "ATSProfile",
     "FormFillingProgress",
     "FormFillingResult",
+    "generic",
     "get_handler_for_profile",
+    "greenhouse",
+    "indeed",
+    "lever",
+    "linkedin",
+    "workday",
 ]
 
 # ── ATS Enum ────────────────────────────────────────────────────────────────────────
@@ -172,7 +177,7 @@ def get_handler_for_profile(profile: ATSProfile) -> type | None:
 
 # Each handler module registers its class in PROFILE_HANDLER_REGISTRY via
 # module-level code.  We import them here (after the registry is defined) so
-# those side effects actually execute — otherwise PROFILE_HANDLER_REGISTRY
+# those side effects actually execute - otherwise PROFILE_HANDLER_REGISTRY
 # stays empty except for GenericFormHandler.
 from browser_engine.ats_profiles import (  # noqa: E402  # isort: skip
     generic,

@@ -26,7 +26,6 @@ from cryptography.exceptions import InvalidTag, UnsupportedAlgorithm
 from core.exceptions import SecurityError
 
 __all__: list[str] = [
-    "EncryptionProvider",
     "decrypt_value",
     "derive_key",
     "detokenize_pii",

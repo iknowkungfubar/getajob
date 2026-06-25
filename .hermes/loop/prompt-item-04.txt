@@ -1,0 +1,34 @@
+Read these files to understand the browser submission flow:
+- /home/turin/getajob/browser_engine/stealth_browser.py (the launch/setup code)
+- /home/turin/getajob/browser_engine/__init__.py (exports)
+- /home/turin/getajob/browser_engine/ats_detector.py (how browser is used)
+- /home/turin/getajob/browser_engine/form_filler.py (form filling)
+
+Then implement graceful degradation when Playwright/Chromium is not installed.
+
+The problem: If a user runs `getajob run` and the browser engine tries to use Playwright but Chromium isn't installed, the user gets an ugly traceback. We need graceful degradation.
+
+Implement these changes:
+
+1. In browser_engine/stealth_browser.py, add a module-level `is_available()` function that:
+   - Tries `import playwright.sync_api` or `import playwright.async_api`
+   - Returns True/False
+   - Does NOT print anything or raise exceptions (silent check)
+
+2. In browser_engine/__init__.py, export `is_available` and add a lazy check so importing the module never crashes.
+
+3. Create or update browser_engine/manual_submit.py with a function `export_submit_url(application)` that:
+   - Takes an Application model object
+   - Returns the job listing URL where the user can manually submit
+   - Returns a dict with: url, company, title, instructions text
+   - This is the fallback when browser automation isn't available
+
+4. In agents/orchestrator_agent.py (wherever browser submission is called), wrap the browser call:
+   - Check `browser_engine.is_available()` before launching the browser
+   - If not available, call the manual submit export instead
+   - Log: "Browser automation unavailable — exported URL for manual submission"
+   - Transition application state to SUBMITTED with a note
+
+5. All imports of browser_engine modules must be LAZY (inside the function that uses them) so that importing the top-level modules never triggers a Playwright import error.
+
+After making changes, run: python3 -m pytest tests/ -q --tb=short

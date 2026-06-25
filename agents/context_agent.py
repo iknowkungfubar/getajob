@@ -1,11 +1,11 @@
-"""Context Agent — Job Description Analysis & Profile Matching (Module 2 adjunct).
+"""Context Agent - Job Description Analysis & Profile Matching (Module 2 adjunct).
 
 Takes a raw job description, uses the LLM to extract structured requirements,
 and maps them against the user's profile to compute a match score.
 
 Key behaviours:
 - **Semantic extraction**: Uses the LLM to extract required skills,
-  technologies, experience level, and methodologies from free‑form text.
+  technologies, experience level, and methodologies from free-form text.
 - **Profile matching**: Queries the :class:`~profile_engine.profile_store.ProfileStore`
   and :class:`~profile_engine.vector_store.VectorStore` to match the profile
   against job requirements.
@@ -86,7 +86,7 @@ class ContextAnalysis(BaseModel):
         default=0.0,
         ge=0.0,
         le=1.0,
-        description="Overall match score (0.0–1.0)",
+        description="Overall match score (0.0-1.0)",
     )
     matching_skills: list[str] = Field(
         default_factory=list,
@@ -106,7 +106,7 @@ class ContextAnalysis(BaseModel):
         default=0.0,
         ge=0.0,
         le=1.0,
-        description="Semantic relevance score from vector search (0.0–1.0)",
+        description="Semantic relevance score from vector search (0.0-1.0)",
     )
     top_relevant_chunks: list[dict[str, Any]] = Field(
         default_factory=list,
@@ -255,7 +255,7 @@ class ContextAgent(BaseAgent):
         Returns:
             A summary dict with the number of analyses performed.
         """
-        self.logger.info("Context agent run — no pending jobs to analyse (orchestrator-driven)")
+        self.logger.info("Context agent run - no pending jobs to analyse (orchestrator-driven)")
         return {"analyses_performed": 0}
 
     # ── Step 1: LLM extraction ─────────────────────────────────────────────
@@ -282,7 +282,7 @@ class ContextAgent(BaseAgent):
             "- methodologies: list of development methodologies mentioned (e.g. agile, scrum, TDD)\n"
             "- role_seniority: string of inferred seniority level (junior, mid, senior, staff, principal, lead, or null)\n"
             "- key_responsibilities: list of key responsibilities mentioned\n\n"
-            "Be precise — only extract what is explicitly stated or clearly implied.\n\n"
+            "Be precise - only extract what is explicitly stated or clearly implied.\n\n"
             f"JOB DESCRIPTION:\n{text[:8000]}"
         )
 
@@ -399,12 +399,12 @@ class ContextAgent(BaseAgent):
 
         Returns:
             Tuple of ``(relevance_score, top_chunks)`` where *relevance_score*
-            is a float 0.0–1.0 and *top_chunks* are the raw VectorStore results.
+            is a float 0.0-1.0 and *top_chunks* are the raw VectorStore results.
         """
         try:
             from profile_engine.vector_store import VectorStore
         except ImportError:
-            self.logger.warning("VectorStore not available — skipping semantic search")
+            self.logger.warning("VectorStore not available - skipping semantic search")
             return 0.0, []
 
         store = VectorStore()
@@ -417,13 +417,13 @@ class ContextAgent(BaseAgent):
             )
             await store.stop()
         except Exception as exc:
-            self.logger.warning("Vector store search failed — skipping", error=str(exc))
+            self.logger.warning("Vector store search failed - skipping", error=str(exc))
             return 0.0, []
 
         if not results:
             return 0.0, []
 
-        # Convert cosine distance to a 0–1 similarity score.
+        # Convert cosine distance to a 0-1 similarity score.
         scores = [max(0.0, 1.0 - r.get("score", 0.0)) for r in results]
         avg_score = statistics.mean(scores) if scores else 0.0
 
@@ -438,7 +438,7 @@ class ContextAgent(BaseAgent):
         partial: list[str],
         relevance_score: float,
     ) -> float:
-        """Compute an overall match score (0.0–1.0).
+        """Compute an overall match score (0.0-1.0).
 
         Formula:
             skill_match = (matching + 0.5 * partial) / max(1, required)
@@ -470,7 +470,7 @@ class ContextAgent(BaseAgent):
         Args:
             requirements: Extracted job requirements.
             profile: Loaded profile data.
-            match_score: Computed match score (0.0–1.0).
+            match_score: Computed match score (0.0-1.0).
 
         Returns:
             A list of warning strings (may be empty).
@@ -479,7 +479,7 @@ class ContextAgent(BaseAgent):
 
         # Low overall match.
         if match_score < 0.3:
-            warnings.append("Overall match score is low — consider whether this role is worth pursuing")
+            warnings.append("Overall match score is low - consider whether this role is worth pursuing")
 
         # Experience level mismatch.
         if requirements.years_experience:

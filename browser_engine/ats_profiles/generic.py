@@ -53,7 +53,7 @@ class GenericFormHandler:
     def __init__(self) -> None:
         self._logger = logger.bind(component="GenericFormHandler")
 
-    async def detect(self, page: Page) -> bool:
+    async def detect(self, _page: Page) -> bool:
         """Always return ``True`` — this is the universal fallback."""
         return True
 

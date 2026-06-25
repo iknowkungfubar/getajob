@@ -1,4 +1,4 @@
-"""Resume Generator — Tailored resume generation for the GetAJob platform.
+"""Resume Generator - Tailored resume generation for the GetAJob platform.
 
 Uses the configured LLM to rewrite profile experience, highlighting the skills
 and achievements most relevant to a specific job listing.  Every generated
@@ -101,7 +101,7 @@ class ResumeGenerator:
             self._system_prompt = prompt_path.read_text(encoding="utf-8")
         else:
             self._system_prompt = self._default_system_prompt()
-            logger.warning("System prompt file not found — using built-in default", path=str(prompt_path))
+            logger.warning("System prompt file not found - using built-in default", path=str(prompt_path))
 
         self._settings = get_settings()
 
@@ -242,7 +242,7 @@ class ResumeGenerator:
             for exp in profile.work_experiences:
                 dates = ""
                 if exp.start_date:
-                    dates = f"{exp.start_date.year} – {exp.end_date.year if exp.end_date else 'Present'}"
+                    dates = f"{exp.start_date.year} - {exp.end_date.year if exp.end_date else 'Present'}"
                 sections.append(f"\n## {exp.title} at {exp.company}  ({dates})")
                 if exp.description:
                     sections.append(exp.description[:500])

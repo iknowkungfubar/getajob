@@ -130,10 +130,10 @@ _SKILL_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
 
 _DATE_PATTERNS = [
     re.compile(r"(?P<start>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4})"
-               r"\s*[-–—to]+\s*"
+               r"\s*[---to]+\s*"
                r"(?P<end>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4}|Present|Current|Now)",
                re.IGNORECASE),
-    re.compile(r"(?P<start>\d{4})\s*[-–—]\s*(?P<end>\d{4}|Present|Current|Now)"),
+    re.compile(r"(?P<start>\d{4})\s*[---]\s*(?P<end>\d{4}|Present|Current|Now)"),
 ]
 
 
@@ -176,7 +176,7 @@ class ExperienceParser:
         skills = parser.extract_skills_from_text("5 years Python, Rust, Kubernetes")
         experiences = parser.parse_resume_text(\"""
             Senior Software Engineer, Acme Corp
-            Jan 2020 — Present
+            Jan 2020 - Present
             Built distributed systems with Rust and Python.
         \""")
     """
@@ -208,7 +208,7 @@ class ExperienceParser:
         text_lower = text.lower()
         found: dict[str, SkillSchema] = {}
 
-        # Lexicon-based extraction (longest match first — patterns pre-compiled).
+        # Lexicon-based extraction (longest match first - patterns pre-compiled).
         for pattern, skill_name, category in _SKILL_PATTERNS:
             if pattern.search(text_lower) and skill_name not in found:
                 found[skill_name] = SkillSchema(
@@ -226,7 +226,7 @@ class ExperienceParser:
                     if key not in found and key not in _KNOWN_SKILLS:
                         found[key] = skill
             except Exception:
-                logger.warning("LLM skill extraction failed — falling back to lexicon only")
+                logger.warning("LLM skill extraction failed - falling back to lexicon only")
 
         return list(found.values())
 
@@ -304,7 +304,7 @@ class ExperienceParser:
 
         if not experiences:
             logger.info(
-                "Resume text did not yield structured entries — all text aggregated into one experience",
+                "Resume text did not yield structured entries - all text aggregated into one experience",
                 source=source_name,
             )
             # Last resort: treat the whole text as a single entry.
@@ -371,7 +371,7 @@ class ExperienceParser:
         """Convert a block of lines into a single experience entry.
 
         Heuristic: the first line typically contains the title and company
-        separated by "at", "@", "—", ",", or "|".
+        separated by "at", "@", "-", ",", or "|".
         """
         if not lines:
             return None
@@ -379,11 +379,11 @@ class ExperienceParser:
         header = lines[0]
         description = "\n".join(lines[1:]) if len(lines) > 1 else None
 
-        # Parse header: "Title at Company", "Title @ Company", "Title — Company", etc.
+        # Parse header: "Title at Company", "Title @ Company", "Title - Company", etc.
         title = header
         company = "Unknown"
 
-        for sep in [" at ", " @ ", " — ", " – ", " - ", " | ", ", "]:
+        for sep in [" at ", " @ ", " - ", " - ", " - ", " | ", ", "]:
             if sep in header:
                 parts = header.split(sep, 1)
                 title = parts[0].strip()
@@ -469,7 +469,7 @@ class ExperienceParser:
         """Read a text file and parse its contents as a resume.
 
         For PDF or DOCX files, only the raw text content is extracted (no
-        complex format preservation — use a dedicated library for that).
+        complex format preservation - use a dedicated library for that).
         """
         path = Path(file_path)
         if not path.exists():

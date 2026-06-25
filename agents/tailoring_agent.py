@@ -1,4 +1,4 @@
-"""Tailoring Agent — Resume & Cover Letter Generation (Module 3).
+"""Tailoring Agent - Resume & Cover Letter Generation (Module 3).
 
 Generates tailored resumes and cover letters by matching job descriptions
 against the user's profile, with anti-hallucination and anti-AI-detection
@@ -10,7 +10,7 @@ Key behaviours:
 - **Anti-hallucination guardrail**: Cross-checks every claim in the generated
   output against the master profile to prevent fabricated credentials.
 - **Anti-AI-detection guardrail**: Applies stylistic rules that avoid common
-  LLM markers — varied sentence structure, industry-specific vocabulary, no
+  LLM markers - varied sentence structure, industry-specific vocabulary, no
   cliché phrases, natural typing patterns.
 - **Structured output**: Returns a :class:`~core.schemas.TailoringResponse`
   with resume text, cover letter, matched skills, and any warnings.
@@ -128,7 +128,7 @@ class TailoringAgent(BaseAgent):
         Returns:
             A summary dict with the number of tailoring operations performed.
         """
-        self.logger.info("Tailoring agent run — no pending jobs (orchestrator-driven)")
+        self.logger.info("Tailoring agent run - no pending jobs (orchestrator-driven)")
         return {"tailored_count": 0}
 
     # ── Main tailoring method ─────────────────────────────────────────────
@@ -163,13 +163,13 @@ class TailoringAgent(BaseAgent):
                 loaded.
         """
         if not job_description or not job_description.strip():
-            msg = "Job description is empty — cannot tailor"
+            msg = "Job description is empty - cannot tailor"
             raise TailoringError(msg, details={"job_listing_id": job_listing_id})
 
         # Step 1: Load the user's profile data.
         profile_data = await self._load_profile_data(profile_id)
         if not profile_data.get("skill_names"):
-            self.logger.warning("Profile has no skills — tailoring may be thin")
+            self.logger.warning("Profile has no skills - tailoring may be thin")
 
         # Step 2: Build the profile context block for the LLM.
         profile_context = self._format_profile_context(profile_data)
@@ -181,7 +181,7 @@ class TailoringAgent(BaseAgent):
             company=company,
             job_description=job_description,
             profile_context=profile_context,
-            profile_data=profile_data,
+            _profile_data=profile_data,
         )
 
         # Step 4: Generate cover letter (optional).
@@ -193,17 +193,17 @@ class TailoringAgent(BaseAgent):
                 company=company,
                 job_description=job_description,
                 profile_context=profile_context,
-                profile_data=profile_data,
+                _profile_data=profile_data,
             )
 
-        # Step 5: Anti-hallucination check — verify all claims against profile.
+        # Step 5: Anti-hallucination check - verify all claims against profile.
         self.logger.debug("Running anti-hallucination check", job_listing_id=job_listing_id)
         warnings: list[str] = []
         combined_text = f"{resume_text}\n\n{cover_letter or ''}"
         hallu_warnings = self._check_hallucinations(combined_text, profile_data)
         warnings.extend(hallu_warnings)
 
-        # Step 6: Anti-AI-detection check — apply style rules.
+        # Step 6: Anti-AI-detection check - apply style rules.
         self.logger.debug("Running anti-AI-detection check", job_listing_id=job_listing_id)
         ai_warnings = self._check_ai_tropes(resume_text, cover_letter or "")
         warnings.extend(ai_warnings)
@@ -224,7 +224,7 @@ class TailoringAgent(BaseAgent):
         )
 
         return TailoringResponse(
-            application_id=uuid.uuid4(),  # Placeholder — orchestrator assigns the real ID.
+            application_id=uuid.uuid4(),  # Placeholder - orchestrator assigns the real ID.
             resume_text=resume_text,
             cover_letter=cover_letter,
             matched_skills=matched_skills,
@@ -280,7 +280,7 @@ class TailoringAgent(BaseAgent):
                     end = exp.get("end_date") or "Present"
                     end_str = end.strftime("%Y-%m") if hasattr(end, "strftime") else end
                     start_str = start.strftime("%Y-%m") if hasattr(start, "strftime") else str(start)
-                    date_str = f" ({start_str} – {end_str})"
+                    date_str = f" ({start_str} - {end_str})"
                 lines.append(f"  - {exp.get('title', 'Role')} @ {exp.get('company', 'Company')}{date_str}")
                 if exp.get("description"):
                     lines.append(f"    {exp['description'][:200]}")
@@ -299,7 +299,7 @@ class TailoringAgent(BaseAgent):
         company: str,
         job_description: str,
         profile_context: str,
-        profile_data: dict[str, Any],
+        _profile_data: dict[str, Any],
     ) -> str:
         """Use the LLM to generate a tailored resume."""
         prompt = (
@@ -310,7 +310,7 @@ class TailoringAgent(BaseAgent):
             "Do NOT fabricate skills, titles, companies, or dates.\n"
             "2. Highlight the experience most relevant to the job description.\n"
             "3. Use concrete achievements and metrics where the profile supports them.\n"
-            "4. Keep it to one page — concise, impactful bullet points.\n"
+            "4. Keep it to one page - concise, impactful bullet points.\n"
             "5. Use natural, varied sentence structure. Do NOT start every bullet "
             "with 'Led', 'Managed', or 'Responsible for'.\n"
             "6. Avoid cliché phrases like 'results-oriented', 'team player', "
@@ -345,7 +345,7 @@ class TailoringAgent(BaseAgent):
         company: str,
         job_description: str,
         profile_context: str,
-        profile_data: dict[str, Any],
+        _profile_data: dict[str, Any],
     ) -> str:
         """Use the LLM to generate a tailored cover letter."""
         prompt = (
@@ -354,13 +354,13 @@ class TailoringAgent(BaseAgent):
             "RULES:\n"
             "1. ONLY use information from the candidate's profile. "
             "Do NOT fabricate anything.\n"
-            "2. Be specific — reference the company and role, and connect "
+            "2. Be specific - reference the company and role, and connect "
             "the candidate's experience to what the job requires.\n"
             "3. Keep it to 3-4 short paragraphs.\n"
             "4. Do NOT use any of these phrases:\n"
             + "\n".join(f"   - \"{p}\"" for p in _CLICHE_PHRASES[:12])
             + "\n"
-            "5. Use natural, human writing — varied sentence lengths, "
+            "5. Use natural, human writing - varied sentence lengths, "
             "specific details, no corporate boilerplate.\n"
             "6. Do not include placeholders like [Your Name] or [Company Name].\n\n"
             f"JOB TITLE: {job_title or 'Unknown'}\n"
@@ -372,7 +372,7 @@ class TailoringAgent(BaseAgent):
         try:
             text = await self._llm.generate_text(
                 prompt,
-                system="You write honest, human-quality cover letters that sound like a real person wrote them — never generic, never cliché.",
+                system="You write honest, human-quality cover letters that sound like a real person wrote them - never generic, never cliché.",
                 max_tokens=2048,
                 temperature=0.8,
             )
@@ -430,7 +430,7 @@ class TailoringAgent(BaseAgent):
         }
 
         # Check companies mentioned in the text.
-        # This is a heuristic — we look for capitalized company-like words.
+        # This is a heuristic - we look for capitalized company-like words.
         company_pattern = re.findall(r'(?<!\w)([A-Z][a-z]+(?:[\s-][A-Z][a-z]+)*)(?!\w)', generated_text)
         known_brands = {"Summary", "Experience", "Skills", "Education", "Work", "History", "Profile"}
         for candidate in company_pattern:
@@ -447,7 +447,7 @@ class TailoringAgent(BaseAgent):
             # Flag unknown companies.
             if candidate_lower not in {"the", "and", "for", "with", "from", "our", "your", "his", "her", "their", "its", "all", "department", "team", "role", "position"}:
                 # Only warn about proper nouns that look company-like.
-                pass  # Too noisy — disabled for now. A production version would use NER.
+                pass  # Too noisy - disabled for now. A production version would use NER.
 
         # Check skill claims.
         # Look for phrases like "proficient in Python" or "experience with React"
@@ -457,9 +457,9 @@ class TailoringAgent(BaseAgent):
         )
         for claimed_skill in skill_claim_pattern:
             claimed_clean = claimed_skill.strip().lower().rstrip(".,;!")
-            if claimed_clean and claimed_clean not in profile_skills:
-                # Check for partial match.
-                if not any(claimed_clean in ps or ps in claimed_clean for ps in profile_skills):
+            if claimed_clean and claimed_clean not in profile_skills and not any(
+                claimed_clean in ps or ps in claimed_clean for ps in profile_skills
+            ):
                     warnings.append(
                         f"Potential hallucination: '{claimed_clean}' is claimed in the "
                         f"generated text but not found in the profile skill set"

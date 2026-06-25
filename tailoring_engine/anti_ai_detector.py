@@ -7,7 +7,7 @@ Key features:
 - **Blocklist scanning**: Flags overused AI phrases (clichés, formulaic
   transitions, hedging language).
 - **Sentence-length variety analysis**: Measures standard deviation of sentence
-  lengths — AI writing tends toward uniform length.
+  lengths - AI writing tends toward uniform length.
 - **Vocabulary richness scoring**: Compares unique-word ratio against
   human-written baselines.
 - **Suggestions**: Provides concrete replacements for flagged phrases.
@@ -245,7 +245,7 @@ class AntiAIDetector:
 
         Returns:
             Tuple of ``(normalised_score, warnings)`` where *normalised_score*
-            is 0.0 (human-like variance) to 1.0 (uniform — AI-like).
+            is 0.0 (human-like variance) to 1.0 (uniform - AI-like).
         """
         import statistics
 
@@ -258,9 +258,9 @@ class AntiAIDetector:
 
         warnings: list[str] = []
         if stddev < 4.0:
-            warnings.append("Sentence lengths are very uniform — rewrite with more variety")
+            warnings.append("Sentence lengths are very uniform - rewrite with more variety")
         elif stddev < 6.0:
-            warnings.append("Sentence length variance is low — mix in shorter and longer sentences")
+            warnings.append("Sentence length variance is low - mix in shorter and longer sentences")
 
         # Normalise: stddev of 2 → 1.0 (very uniform), 12+ → 0.0 (human-like).
         normalised = max(0.0, min(1.0, 1.0 - (stddev - 2.0) / 10.0))
@@ -294,7 +294,7 @@ class AntiAIDetector:
         total = len(cleaned)
         ttr = unique / total
 
-        # Score: distance from the ideal human range (0.45–0.65).
+        # Score: distance from the ideal human range (0.45-0.65).
         if 0.45 <= ttr <= 0.65:
             return 0.0
 
@@ -303,7 +303,7 @@ class AntiAIDetector:
         if ttr < 0.45:
             return (0.45 - ttr) / 0.1  # Slightly repetitive.
 
-        # TTR > 0.65 — unusually varied vocabulary.
+        # TTR > 0.65 - unusually varied vocabulary.
         return min(1.0, (ttr - 0.65) / 0.15)
 
     # ── Format analysis ─────────────────────────────────────────────────────────
@@ -321,14 +321,14 @@ class AntiAIDetector:
         bullet_lines = sum(1 for line in lines if line.strip().startswith(("- ", "* ", "•")))
         total_content_lines = sum(1 for line in lines if line.strip())
         if total_content_lines > 5 and bullet_lines / total_content_lines > 0.7:
-            warnings.append("Excessive bullet-point usage — intersperse with paragraph text")
+            warnings.append("Excessive bullet-point usage - intersperse with paragraph text")
 
         # Check for uniform paragraph length.
         paragraphs = [p for p in text.split("\n\n") if p.strip()]
         if len(paragraphs) > 2:
             para_lengths = [len(p.split()) for p in paragraphs]
-            if all(30 <= l <= 60 for l in para_lengths):
-                warnings.append("All paragraphs are similar length — vary paragraph structure")
+            if all(30 <= pl <= 60 for pl in para_lengths):
+                warnings.append("All paragraphs are similar length - vary paragraph structure")
 
         # Check for certain markdown patterns that look templated.
         if re.search(r"\*\*Summary\*\*|\*\*Professional Summary\*\*", text):

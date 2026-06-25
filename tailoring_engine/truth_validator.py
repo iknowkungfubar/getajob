@@ -1,4 +1,4 @@
-"""Truth Validator — Hallucination Cross-Checker for the Tailoring Engine.
+"""Truth Validator - Hallucination Cross-Checker for the Tailoring Engine.
 
 Verifies that every factual claim in a generated resume or cover letter can be
 traced back to the user's master profile.  Extracts claims from generated text,
@@ -66,7 +66,7 @@ _CLAIM_PATTERNS: list[tuple[str, type[str]]] = [
     # Years of experience
     (r"(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+experience", str),
     # Date ranges
-    (r"(19|20)\d{2}\s*[-–—to]+\s*(?:(?:19|20)\d{2}|Present|Current)", str),
+    (r"(19|20)\d{2}\s*[---to]+\s*(?:(?:19|20)\d{2}|Present|Current)", str),
     # Metrics (numbers that might be fabricated).
     (r"(?:over|more than|approximately|about)\s+(\d[\d,]*[kKmM]?%?)", str),
     # Specific achievements.
@@ -138,7 +138,7 @@ class TruthValidator:
         # If nothing was detected at all, we might have missed everything
         # (conservative: flag if no claims were verifiable).
         if not hallucinations and not unverifiable:
-            # No claims found in text — could be a problem with extraction,
+            # No claims found in text - could be a problem with extraction,
             # but assume valid.
             pass
 
@@ -211,13 +211,13 @@ class TruthValidator:
         self,
         text: str,
         profile: dict[str, Any],
-        hallucinations: list[str],
+        _hallucinations: list[str],
         unverifiable: list[str],
     ) -> None:
         """Extract company name mentions and verify against the profile."""
         profile_companies = profile.get("company_names", set())
         if not profile_companies:
-            return  # No companies in profile — nothing to check.
+            return  # No companies in profile - nothing to check.
 
         # Find "at <Company>" patterns.
         matches = re.finditer(
@@ -247,7 +247,7 @@ class TruthValidator:
         self,
         text: str,
         profile: dict[str, Any],
-        hallucinations: list[str],
+        _hallucinations: list[str],
         unverifiable: list[str],
     ) -> None:
         """Extract job title mentions and verify against the profile."""
@@ -281,8 +281,8 @@ class TruthValidator:
         self,
         text: str,
         profile: dict[str, Any],
-        hallucinations: list[str],
-        unverifiable: list[str],
+        _hallucinations: list[str],
+        _unverifiable: list[str],
     ) -> None:
         """Check years-of-experience claims against the profile.
 
@@ -300,7 +300,7 @@ class TruthValidator:
                 continue
             # Allow a 2-year buffer for rounding / partial years.
             if claimed > profile_years + 2.0:
-                hallucinations.append(
+                _hallucinations.append(
                     f"Claims '{claimed}+ years experience' but profile shows ~{profile_years:.0f}"
                 )
 
@@ -308,7 +308,7 @@ class TruthValidator:
         self,
         text: str,
         profile: dict[str, Any],
-        hallucinations: list[str],
+        _hallucinations: list[str],
         unverifiable: list[str],
     ) -> None:
         """Check date-range claims against the profile.
@@ -331,12 +331,12 @@ class TruthValidator:
 
         # Find date range patterns in text.
         matches = re.finditer(
-            r"(19|20)\d{2}\s*[-–—to]+\s*(?:(?:19|20)\d{2}|Present|Current)",
+            r"(19|20)\d{2}\s*[---to]+\s*(?:(?:19|20)\d{2}|Present|Current)",
             text,
         )
         for match in matches:
             range_str = match.group(0)
-            parts = re.split(r"\s*[-–—to]+\s*", range_str)
+            parts = re.split(r"\s*[---to]+\s*", range_str)
             if len(parts) != 2:
                 continue
             try:
@@ -368,13 +368,13 @@ class TruthValidator:
         self,
         text: str,
         profile: dict[str, Any],
-        hallucinations: list[str],
+        _hallucinations: list[str],
         unverifiable: list[str],
     ) -> None:
         """Verify skill mentions against the profile's listed skills.
 
         Skills that appear in the text but not in the profile are flagged
-        as unverifiable (not hallucinations — the user may have the skill
+        as unverifiable (not hallucinations - the user may have the skill
         even if it's not in their formal profile).
         """
         profile_skills = profile.get("skills", set())

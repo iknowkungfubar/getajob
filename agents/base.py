@@ -26,14 +26,14 @@ from core.event_bus import EventBus, EventPriority, InMemoryEventBus
 
 __all__: list[str] = [
     "BaseAgent",
-    "HumanInLoopPause",
+    "HumanInLoopPauseError",
 ]
 
 
 # ── Human-in-the-Loop Exception ──────────────────────────────────────────────
 
 
-class HumanInLoopPause(Exception):
+class HumanInLoopPauseError(Exception):
     """Raised when an agent reaches a point that requires human review.
 
     The orchestrator catches this exception and routes the item to the

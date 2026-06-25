@@ -207,7 +207,7 @@ def mock_llm() -> MockLLMClient:
                 _MOCK_RESUME_TEXT
             ),
             # TailoringAgent._generate_cover_letter system prompt.
-            "You write honest, human-quality cover letters that sound like a real person wrote them — never generic, never cliché.": (
+            "You write honest, human-quality cover letters that sound like a real person wrote them - never generic, never cliché.": (
                 _MOCK_COVER_LETTER
             ),
         }

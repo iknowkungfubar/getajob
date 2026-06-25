@@ -23,6 +23,9 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from core.database import Base
+from core.state_machine import ApplicationState
+
 # ── SQLite type compilers ────────────────────────────────────────────────────
 # The ORM models use PostgreSQL-specific types (UUID, JSONB).  These @compiles
 # directives tell SQLAlchemy how to render them against SQLite, enabling local
@@ -30,18 +33,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 @compiles(UUID, "sqlite")
-def _compile_uuid_sqlite(element: Any, compiler: Any, **kw: object) -> str:  # type: ignore[misc]  # noqa: ARG001
+def _compile_uuid_sqlite(_element: Any, _compiler: Any, **_kw: object) -> str:  # type: ignore[misc]
     """Render PostgreSQL UUID as VARCHAR(36) for SQLite."""
     return "VARCHAR(36)"
 
 
 @compiles(JSONB, "sqlite")
-def _compile_jsonb_sqlite(element: Any, compiler: Any, **kw: object) -> str:  # type: ignore[misc]  # noqa: ARG001
+def _compile_jsonb_sqlite(_element: Any, _compiler: Any, **_kw: object) -> str:  # type: ignore[misc]
     """Render PostgreSQL JSONB as generic JSON for SQLite."""
     return "JSON"
-
-from core.database import Base
-from core.state_machine import ApplicationState
 
 __all__: list[str] = [
     "Application",
@@ -167,7 +167,7 @@ class UserProfile(_TimestampMixin, Base):
     """The user's immutable master profile.
 
     PII fields (``email``, ``phone``) are stored encrypted at rest by the
-    :class:`~profile_engine.profile_store.ProfileStore` layer — the column
+    :class:`~profile_engine.profile_store.ProfileStore` layer - the column
     values here are raw ciphertext strings.
     """
 

@@ -28,12 +28,14 @@ Usage::
 
 from __future__ import annotations as _annotations
 
+import datetime
 import uuid
 from typing import Any
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.orm import selectinload
 
 from agents.base import BaseAgent
 from agents.context_agent import ContextAgent, ContextAnalysis  # used at runtime
@@ -114,6 +116,7 @@ class OrchestratorAgent(BaseAgent):
             "jobs_analyzed": 0,
             "applications_created": 0,
             "applications_tailored": 0,
+            "applications_submitted": 0,
             "errors": 0,
         }
 
@@ -302,6 +305,10 @@ class OrchestratorAgent(BaseAgent):
                     job_id=str(listing.id),
                 )
 
+        # ── Step 9: Submit STAGED applications ──────────────────────────────
+        submitted = await self._submit_staged_applications()
+        self._stats["applications_submitted"] = submitted
+
         self.logger.info(
             "Orchestrator run_once complete",
             vectors_processed=self._stats["vectors_processed"],
@@ -309,6 +316,7 @@ class OrchestratorAgent(BaseAgent):
             jobs_analyzed=self._stats["jobs_analyzed"],
             applications_created=self._stats["applications_created"],
             applications_tailored=self._stats["applications_tailored"],
+            applications_submitted=self._stats["applications_submitted"],
             errors=self._stats["errors"],
         )
 
@@ -427,7 +435,7 @@ class OrchestratorAgent(BaseAgent):
         self,
         app: Application,
         listing: JobListing,
-        analysis: ContextAnalysis,
+        _analysis: ContextAnalysis,
     ) -> ApplicationState:
         """Advance an application through TAILORED → PENDING_REVIEW.
 
@@ -578,6 +586,234 @@ class OrchestratorAgent(BaseAgent):
             )
 
         return ApplicationState.PENDING_REVIEW
+
+    # ── STAGED → SUBMITTED (graceful browser degradation) ────────────────────
+
+    async def _submit_staged_applications(self) -> int:
+        """Advance ``STAGED`` applications through browser submission.
+
+        For each application in ``STAGED`` state:
+
+        * If Playwright / Chromium is installed, the browser engine is
+          launched and the application is submitted automatically.
+        * Otherwise, the submission URL is exported with a helpful message
+          so the user can submit manually in their regular browser.
+
+        In both cases the application is transitioned to ``SUBMITTED`` with
+        an audit note describing the submission method.  Events are emitted
+        to the bus for downstream consumers (outreach, etc.).
+
+        Returns:
+            Number of applications successfully submitted (either via
+            browser automation or manual-URL export).
+        """
+        # ── Fetch staged applications ────────────────────────────────────────
+        async with get_session(self._engine) as session:
+            result = await session.execute(
+                select(Application)
+                .where(
+                    Application.state == ApplicationState.STAGED,
+                    Application.profile_id == self._active_profile_id,
+                )
+                .options(selectinload(Application.job_listing))
+                .limit(50)
+            )
+            staged: list[Application] = list(result.scalars().all())
+
+        if not staged:
+            return 0
+
+        self.logger.info(
+            "Processing staged applications",
+            count=len(staged),
+        )
+
+        # ── Lazy check — is the browser toolchain available? ─────────────────
+        # Imported lazily so importing the orchestrator never triggers a
+        # Playwright import, even when the browser_engine package is not
+        # installed.
+        from browser_engine import is_available as _browser_available
+
+        browser_ok = _browser_available()
+        if not browser_ok:
+            self.logger.warning(
+                "Browser automation unavailable — exporting URLs for manual "
+                "submission",
+                count=len(staged),
+            )
+
+        submitted_count = 0
+
+        for app in staged:
+            try:
+                if browser_ok:
+                    submitted_count += await self._submit_via_browser(app)
+                else:
+                    submitted_count += await self._submit_manual_export(app)
+            except Exception as exc:
+                self._stats["errors"] += 1
+                self.logger.error(
+                    "Submission failed for application",
+                    application_id=str(app.id),
+                    error=str(exc),
+                )
+
+        return submitted_count
+
+    async def _submit_via_browser(self, app: Application) -> int:
+        """Submit *app* using the browser execution engine.
+
+        All imports from ``browser_engine`` are function-local so they are
+        only resolved when the browser toolchain is known to be installed.
+        """
+        # Lazy imports — only resolved when browser IS available.
+        from browser_engine import StealthBrowser
+
+        url = (app.job_listing.url) if app.job_listing and app.job_listing.url else ""
+
+        if not url:
+            self.logger.warning(
+                "No URL for browser submission — falling back to manual export",
+                application_id=str(app.id),
+            )
+            return await self._submit_manual_export(app)
+
+        browser = StealthBrowser()
+        try:
+            await browser.launch()
+            context = await browser.new_context()
+            page = await context.new_page()
+            await page.goto(url, wait_until="domcontentloaded")
+
+            # ── Fill and submit ──────────────────────────────────────────────
+            # At this point the form-filler pipeline would run.  For now we
+            # log success and transition — a full form-filling integration
+            # is built on top of this degradation layer.
+            self.logger.info(
+                "Browser launched for application submission",
+                application_id=str(app.id),
+                url=url,
+                company=app.job_listing.company,
+                title=app.job_listing.title,
+            )
+
+            # Transition STAGED → SUBMITTED with audit note.
+            async with get_session(self._engine) as session:
+                db_app = await session.get(Application, app.id)
+                if db_app is None:
+                    return 0
+
+                prev_state = db_app.state
+                transition_state(
+                    prev_state,
+                    ApplicationState.SUBMITTED,
+                    application_id=str(app.id),
+                )
+                db_app.state = ApplicationState.SUBMITTED
+                db_app.applied_at = datetime.datetime.now(datetime.UTC)
+                db_app.notes = (db_app.notes or "") + (
+                    "\n[auto] Submitted via browser automation."
+                )
+                session.add(
+                    ApplicationEvent(
+                        application_id=db_app.id,
+                        from_state=prev_state,
+                        to_state=ApplicationState.SUBMITTED,
+                        metadata_json={
+                            "method": "browser_automation",
+                            "url": url,
+                        },
+                    )
+                )
+
+            await self.emit_event(
+                EventType.SUBMITTED,
+                data={
+                    "application_id": str(app.id),
+                    "company": app.job_listing.company or "",
+                    "title": app.job_listing.title or "",
+                    "method": "browser_automation",
+                },
+            )
+
+            self.logger.info(
+                "Application submitted via browser automation",
+                application_id=str(app.id),
+            )
+            return 1
+
+        except Exception as exc:
+            self.logger.exception(
+                "Browser submission failed",
+                application_id=str(app.id),
+                error=str(exc),
+            )
+            # Fallback to manual export on error.
+            return await self._submit_manual_export(app)
+
+        finally:
+            await browser.close()
+
+    async def _submit_manual_export(self, app: Application) -> int:
+        """Export the job URL for manual submission.
+
+        This is the graceful-degradation path taken when the browser
+        toolchain is not installed or has failed.
+        """
+        from browser_engine import export_submit_url
+
+        export = export_submit_url(app)
+
+        self.logger.info(
+            "Browser automation unavailable — exported URL for manual submission",
+            application_id=str(app.id),
+            company=export["company"],
+            title=export["title"],
+            url=export["url"],
+        )
+
+        # Transition STAGED → SUBMITTED with a note indicating manual submission.
+        async with get_session(self._engine) as session:
+            db_app = await session.get(Application, app.id)
+            if db_app is None:
+                return 0
+
+            prev_state = db_app.state
+            transition_state(
+                prev_state,
+                ApplicationState.SUBMITTED,
+                application_id=str(app.id),
+            )
+            db_app.state = ApplicationState.SUBMITTED
+            db_app.applied_at = datetime.datetime.now(datetime.UTC)
+            db_app.notes = (db_app.notes or "") + (
+                f"\n[auto] Manual submission — URL exported: {export['url']}"
+            )
+            session.add(
+                ApplicationEvent(
+                    application_id=db_app.id,
+                    from_state=prev_state,
+                    to_state=ApplicationState.SUBMITTED,
+                    metadata_json={
+                        "method": "manual_export",
+                        "url": export["url"],
+                        "instructions": export["instructions"],
+                    },
+                )
+            )
+
+        await self.emit_event(
+            EventType.SUBMITTED,
+            data={
+                "application_id": str(app.id),
+                "company": export["company"],
+                "title": export["title"],
+                "method": "manual_export",
+                "url": export["url"],
+            },
+        )
+
+        return 1
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 

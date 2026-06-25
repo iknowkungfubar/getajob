@@ -1,0 +1,24 @@
+Read /home/turin/getajob/getajob/cli.py to understand the current Typer app structure, then read /home/turin/getajob/env.template and /home/turin/getajob/config/settings.yaml.
+
+Then add a new `init` CLI command to getajob/cli.py. This is an interactive first-run wizard for non-technical users.
+
+The `init` command should:
+
+1. Check if .env already exists; if so, ask "Overwrite existing config?" (y/N)
+2. Prompt the user for their LLM API key (Anthropic or OpenAI)
+3. Write .env file with the API key and sensible defaults
+4. Prompt for name and email (optional, for profile)
+5. Create a user profile in the database if name/email provided (call the profile store)
+6. Generate 3 default search vectors in the settings.yaml config:
+   - "Software Engineer" (remote, US, keywords: python, typescript, go, rust, aws, kubernetes)
+   - "Data Scientist" (remote, US, keywords: python, pytorch, tensorflow, sql, ml)
+   - "Product Manager" (remote, US, keywords: product strategy, agile, analytics)
+7. Run setup (create database tables)
+8. Print a success summary with next steps:
+   - "Run `getajob run` to start discovering jobs"
+   - "Run `getajob serve` to open the approval queue"
+   - "Edit .env for advanced configuration"
+
+The command should use typer.prompt() for interactive input. Handle the case where the database isn't available yet gracefully. All output through the existing rich Console().
+
+After adding the command, run: python3 -m pytest tests/ -q --tb=short

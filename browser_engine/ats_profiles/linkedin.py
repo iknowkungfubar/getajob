@@ -9,7 +9,7 @@ since each employer customises the questions.
 from __future__ import annotations as _annotations
 
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from playwright.async_api import Page
@@ -23,6 +23,10 @@ from browser_engine.ats_profiles import (
 __all__: list[str] = [
     "LinkedInFormHandler",
 ]
+
+if TYPE_CHECKING:
+    from browser_engine.form_filler import FormFiller
+    from browser_engine.human_simulator import HumanSimulator
 
 logger = structlog.get_logger(__name__)
 
@@ -210,7 +214,7 @@ class LinkedInFormHandler:
         self,
         page: Page,
         human: HumanSimulator,
-        filler: FormFiller,
+        _filler: FormFiller,
         profile: Any,
         cover_letter_text: str | None,
         result: FormFillingResult,
@@ -274,10 +278,9 @@ class LinkedInFormHandler:
                 elif self._field_matches(label_text, placeholder, name, "salary"):
                     # Skip salary expectations — user may not want to share.
                     pass
-                elif self._field_matches(label_text, placeholder, name, "linkedin"):
-                    if profile.linkedin_url:
-                        await human.human_type(page, inp, profile.linkedin_url)
-                        result.fields_filled.append("linkedin")
+                elif self._field_matches(label_text, placeholder, name, "linkedin") and profile.linkedin_url:
+                    await human.human_type(page, inp, profile.linkedin_url)
+                    result.fields_filled.append("linkedin")
             except Exception as exc:
                 logger.debug("Field interaction failed", field="text_input", error=str(exc))
                 continue
@@ -289,10 +292,9 @@ class LinkedInFormHandler:
                 if not await dd.is_visible():
                     continue
                 label_text = await self._find_label_text(page, dd)
-                if re.search(r"work.?auth|visa|sponsor", label_text, re.IGNORECASE):
-                    if profile.work_authorization:
-                        await dd.select_option(label=profile.work_authorization)
-                        result.fields_filled.append("work_authorization")
+                if re.search(r"work.?auth|visa|sponsor", label_text, re.IGNORECASE) and profile.work_authorization:
+                    await dd.select_option(label=profile.work_authorization)
+                    result.fields_filled.append("work_authorization")
             except Exception as exc:
                 logger.debug("Field interaction failed", field="dropdown", error=str(exc))
                 continue

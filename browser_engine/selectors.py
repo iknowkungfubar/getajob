@@ -388,7 +388,7 @@ _SEMANTIC_FIELD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
 }
 
 
-async def dynamic_select(page: Page, field_hint: str, *, context: str | None = None) -> ElementHandle | None:
+async def dynamic_select(page: Page, field_hint: str, *, _context: str | None = None) -> ElementHandle | None:
     """Use text-label analysis to find a form field by semantic meaning.
 
     When CSS selectors fail, this function scans the page for visible labels
