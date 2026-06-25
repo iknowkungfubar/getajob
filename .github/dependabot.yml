@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GetAJob — Dependabot Configuration
+#
+# Managed automatically. Manual edits will be preserved.
+#
+# Ecosystem mapping:
+#   pip  → pyproject.toml + uv.lock  (uv is pip-compatible)
+#   docker → Dockerfile
+#   github-actions → .github/workflows/*.yml
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 2
+enable-beta-ecosystems: true   # uv support while in beta
+
+updates:
+
+  # ── Python dependencies (uv/pip) ──────────────────────────────────────────
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    reviewers:
+      - "iknowkungfubar"
+
+    # Group minor & patch updates → one PR each
+    groups:
+      minor-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+    # Ignore major version bumps — review manually
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # ── Docker ────────────────────────────────────────────────────────────────
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+
+    groups:
+      docker-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ── GitHub Actions ────────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

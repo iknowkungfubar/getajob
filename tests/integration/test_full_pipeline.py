@@ -1,7 +1,7 @@
 """Full pipeline integration test.
 
 Tests the end-to-end flow through all stages:
-    Discovery → Context Analysis → Tailoring → Application → HITL Gate
+    Discovery -> Context Analysis -> Tailoring -> Application -> HITL Gate
 
 Uses an in-memory SQLite database (with ``@compiles`` overrides for
 PostgreSQL-specific types), :class:`~core.llm_client.MockLLMClient` for
@@ -14,14 +14,35 @@ process the listing through the full pipeline.
 
 from __future__ import annotations as _annotations
 
-# ── SQLite type compilers — registered BEFORE any model imports ───────────────
+# ── Standard library ─────────────────────────────────────────────────────────
+import datetime
+import json
+import uuid
+from collections.abc import AsyncIterator
+from typing import Any
+from unittest.mock import AsyncMock
+
+# ── Third-party ──────────────────────────────────────────────────────────────
+import pytest
+import pytest_asyncio
+import sqlalchemy as sa
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.compiler import compiles
+
+# ── Project imports ─────────────────────────────────────────────────────────
+from agents.orchestrator_agent import OrchestratorAgent
+from core.database import Base, get_session
+from core.event_bus import EventPriority, InMemoryEventBus
+from core.llm_client import MockLLMClient
+from core.models import Application, ApplicationEvent, JobListing, UserProfile, WorkExperience
+from core.state_machine import ApplicationState, StateMachineError, transition_state
+
+# ── SQLite type compilers (lazy — only needed at query time, not import time) ─
 #
 # The ORM models use PostgreSQL-specific types (UUID, JSONB).  These custom
 # `@compiles` directives tell SQLAlchemy how to render them against SQLite.
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.ext.compiler import compiles
-
 
 @compiles(UUID, "sqlite")
 def _compile_uuid_sqlite(element: sa.TypeEngine, compiler: sa.Compiled, **kw: object) -> str:  # type: ignore[misc]  # noqa: ARG001
@@ -33,27 +54,6 @@ def _compile_uuid_sqlite(element: sa.TypeEngine, compiler: sa.Compiled, **kw: ob
 def _compile_jsonb_sqlite(element: sa.TypeEngine, compiler: sa.Compiled, **kw: object) -> str:  # type: ignore[misc]  # noqa: ARG001
     """Render PostgreSQL JSONB as generic JSON for SQLite."""
     return compiler.process(sa.JSON())
-
-
-# ── Test module imports ──────────────────────────────────────────────────────
-
-import datetime
-import json
-import uuid
-from collections.abc import AsyncIterator
-from typing import Any
-from unittest.mock import AsyncMock
-
-import pytest
-import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-
-from agents.orchestrator_agent import OrchestratorAgent
-from core.database import Base
-from core.event_bus import EventPriority, InMemoryEventBus
-from core.llm_client import MockLLMClient
-from core.models import Application, ApplicationEvent, JobListing, UserProfile, WorkExperience
-from core.state_machine import ApplicationState
 
 __all__: list[str] = []
 
@@ -94,12 +94,12 @@ Results-driven engineer with deep expertise in Python, Rust, and distributed
 systems. 10+ years designing and operating large-scale infrastructure.
 
 EXPERIENCE
-Staff Engineer | Acme Corp (2020–Present)
+Staff Engineer | Acme Corp (2020-Present)
 - Designed a distributed task queue processing 1M+ jobs/day
 - Migrated monolith to event-driven microservices, reducing p95 latency by 40%
 - Mentored 5 junior engineers through structured pair-programming rotations
 
-Senior Engineer | Beta Inc (2016–2020)
+Senior Engineer | Beta Inc (2016-2020)
 - Built real-time analytics pipeline handling 10TB/day
 - Deployed Kubernetes clusters across 3 regions for HA workloads
 
@@ -217,8 +217,6 @@ def mock_llm() -> MockLLMClient:
 @pytest_asyncio.fixture
 async def seed_profile(db_engine: AsyncEngine) -> uuid.UUID:
     """Insert a mock user profile and return its ID."""
-    from core.database import get_session
-
     profile_id = uuid.uuid4()
 
     async with get_session(db_engine) as session:
@@ -257,8 +255,6 @@ async def seed_profile(db_engine: AsyncEngine) -> uuid.UUID:
 @pytest_asyncio.fixture
 async def seed_listing(db_engine: AsyncEngine) -> uuid.UUID:
     """Insert a mock job listing and return its ID."""
-    from core.database import get_session
-
     listing_id = uuid.uuid4()
 
     async with get_session(db_engine) as session:
@@ -365,10 +361,6 @@ class TestFullPipeline:
             )
 
             # ── Step 6: Assert database records ──────────────────────────
-            from sqlalchemy import select
-
-            from core.database import get_session
-
             async with get_session(db_engine) as session:
                 app_query = select(Application).where(
                     Application.job_listing_id == seed_listing
@@ -484,10 +476,6 @@ class TestFullPipeline:
             )
 
             # Verify no Application record was created.
-            from sqlalchemy import select
-
-            from core.database import get_session
-
             async with get_session(db_engine) as session:
                 app_query = select(Application).where(
                     Application.job_listing_id == seed_listing
@@ -514,7 +502,6 @@ class TestFullPipeline:
         When an Application already exists for a listing, the orchestrator
         should skip it during the next pass.
         """
-        from core.database import get_session
 
         # Pre-create an Application so there are no unwatched listings.
         async with get_session(db_engine) as session:
@@ -567,8 +554,6 @@ class TestFullPipeline:
     ) -> None:
         """Verify that a failure in one job does not prevent others from
         processing (the orchestrator's 'isolated errors' guarantee)."""
-        from core.database import get_session
-
         # Seed a second listing.
         second_listing_id = uuid.uuid4()
         async with get_session(db_engine) as session:
@@ -627,8 +612,6 @@ class TestFullPipeline:
         mock_llm: MockLLMClient,
     ) -> None:
         """Verify that the state machine rejects invalid transitions."""
-        from core.state_machine import StateMachineError, transition_state
-
         # DISCOVERED → SUBMITTED is not allowed.
         with pytest.raises(StateMachineError, match="Cannot transition"):
             transition_state(

@@ -91,7 +91,9 @@ ALLOWED_TRANSITIONS: dict[ApplicationState, set[ApplicationState]] = {
         ApplicationState.FAILED,
     },
     # Terminal states — no outgoing transitions
-    ApplicationState.REJECTED: set(),
+    ApplicationState.REJECTED: {
+        ApplicationState.PENDING_REVIEW,  # HITL reset: un-reject for re-review
+    },
     ApplicationState.FAILED: set(),
 }
 

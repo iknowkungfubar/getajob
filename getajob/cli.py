@@ -65,6 +65,18 @@ app = typer.Typer(
 console = Console()
 err_console = Console(stderr=True)
 
+# ── Vector sub-app ───────────────────────────────────────────────────────────
+
+vector_app = typer.Typer(
+    name="vector",
+    help="Manage search vectors.",
+)
+
+profile_app = typer.Typer(
+    name="profile",
+    help="Manage user profile.",
+)
+
 
 # ── Utility ──────────────────────────────────────────────────────────────────
 
@@ -902,6 +914,334 @@ def setup(
     _run_async(_run())
 
 
+# ── Profile commands ───────────────────────────────────────────────────────
+
+
+@profile_app.command()
+def show() -> None:
+    """Show the currently active profile.
+
+    Displays name, email, location, skills, and work authorisation
+    from the database in a formatted table.
+    """
+    async def _run() -> None:
+        engine = None
+        try:
+            from core.database import create_engine
+            from profile_engine.profile_store import ProfileStore
+
+            engine = create_engine()
+            store = ProfileStore(engine)
+            profiles = await store.list_profiles(limit=1)
+
+            if not profiles:
+                console.print(
+                    "[yellow]No profile configured. Run 'getajob init' to create one.[/]"
+                )
+                return
+
+            profile = profiles[0]
+
+            table = Table(title="User Profile", border_style="blue")
+            table.add_column("Field", style="cyan", no_wrap=True)
+            table.add_column("Value")
+
+            table.add_row("Name", profile.name or "")
+            table.add_row("Email", profile.email or "")
+            table.add_row("Location", profile.location or "[dim]not set[/]")
+
+            if profile.skills:
+                skills_str = ", ".join(s.name for s in profile.skills)
+            else:
+                skills_str = "[dim]none[/]"
+            table.add_row("Skills", skills_str)
+            table.add_row(
+                "Work Authorization", profile.work_authorization or "[dim]not set[/]"
+            )
+
+            console.print(table)
+        except Exception as exc:
+            err_console.print(f"[red]✗[/] Could not load profile: {exc}")
+        finally:
+            if engine is not None:
+                await engine.dispose()
+
+    _run_async(_run())
+
+
+@profile_app.command()
+def update() -> None:
+    """Update profile fields via interactive prompts.
+
+    Shows current values; press Enter to keep a field unchanged.
+    Only changed fields are sent to the database.
+    """
+    async def _run() -> None:
+        engine = None
+        try:
+            from core.database import create_engine
+            from core.schemas import ProfileUpdate, SkillSchema
+            from profile_engine.profile_store import ProfileStore
+
+            engine = create_engine()
+            store = ProfileStore(engine)
+            profiles = await store.list_profiles(limit=1)
+
+            if not profiles:
+                console.print(
+                    "[yellow]No profile configured."
+                    " Run 'getajob init' to create one first.[/]"
+                )
+                return
+
+            current = profiles[0]
+            console.print(
+                Panel.fit("[bold cyan]✏️  Update Profile[/]", border_style="cyan")
+            )
+            console.print("[dim]Press Enter to keep the current value.[/]\n")
+
+            # Interactive prompts with current values as defaults.
+            name = typer.prompt("  Name", default=current.name or "")
+            email = typer.prompt("  Email", default=current.email or "")
+            location = typer.prompt("  Location", default=current.location or "")
+
+            current_skills_str = (
+                ", ".join(s.name for s in current.skills)
+                if current.skills
+                else ""
+            )
+            skills_str = typer.prompt(
+                "  Skills (comma-separated)", default=current_skills_str
+            )
+
+            work_auth = typer.prompt(
+                "  Work Authorization", default=current.work_authorization or ""
+            )
+
+            # Build update payload with only changed fields.
+            update_data: dict[str, Any] = {}
+
+            if name.strip() and name.strip() != (current.name or ""):
+                update_data["name"] = name.strip()
+            if email.strip() and email.strip() != (current.email or ""):
+                update_data["email"] = email.strip()
+            if location.strip() and location.strip() != (current.location or ""):
+                update_data["location"] = location.strip()
+
+            # Skills: comma-separated string -> list[SkillSchema].
+            if skills_str.strip():
+                new_skills = [s.strip() for s in skills_str.split(",") if s.strip()]
+                old_skills = [s.name for s in current.skills] if current.skills else []
+                if new_skills != old_skills:
+                    update_data["skills"] = [SkillSchema(name=s) for s in new_skills]
+            elif current.skills:
+                # User explicitly cleared the skills field.
+                update_data["skills"] = []
+
+            if work_auth.strip() and work_auth.strip() != (
+                current.work_authorization or ""
+            ):
+                update_data["work_authorization"] = work_auth.strip()
+            elif not work_auth.strip() and current.work_authorization:
+                update_data["work_authorization"] = ""
+
+            if not update_data:
+                console.print("[yellow]No changes made.[/]")
+                return
+
+            updated = await store.update_profile(
+                current.id,
+                ProfileUpdate(**update_data),
+            )
+
+            # Confirmation table.
+            field_labels = {
+                "name": "Name",
+                "email": "Email",
+                "location": "Location",
+                "skills": "Skills",
+                "work_authorization": "Work Authorization",
+            }
+            updated_values = {
+                "name": updated.name or "",
+                "email": updated.email or "",
+                "location": updated.location or "",
+                "skills": (
+                    ", ".join(s.name for s in updated.skills)
+                    if updated.skills
+                    else "[dim]none[/]"
+                ),
+                "work_authorization": updated.work_authorization or "[dim]not set[/]",
+            }
+
+            console.print("\n[green]✓[/] Profile updated successfully.")
+            table = Table(border_style="green", show_header=False)
+            table.add_column("Field", style="bold cyan")
+            table.add_column("Value")
+
+            for field_name in update_data:
+                table.add_row(
+                    field_labels.get(field_name, field_name.capitalize()),
+                    updated_values.get(field_name, ""),
+                )
+
+            console.print(table)
+        except Exception as exc:
+            err_console.print(f"[red]✗[/] Could not update profile: {exc}")
+        finally:
+            if engine is not None:
+                await engine.dispose()
+
+    _run_async(_run())
+
+
+# ── Vector commands ─────────────────────────────────────────────────────────
+
+
+@vector_app.command(name="list")
+def vector_list() -> None:
+    """List all configured search vectors from config/settings.yaml.
+
+    Displays a Rich-formatted table with name, keywords, locations, and
+    remote preference for each configured search vector.
+    """
+    project_root = Path(__file__).resolve().parent.parent
+    yaml_path = project_root / "config" / "settings.yaml"
+
+    if not yaml_path.exists():
+        console.print(
+            "[yellow]No search vectors configured."
+            " Run 'getajob init' to set up defaults.[/]"
+        )
+        raise typer.Exit()
+
+    with yaml_path.open("r") as f:
+        data = yaml.safe_load(f) or {}
+
+    vectors = data.get("search_vectors", [])
+    if not vectors:
+        console.print(
+            "[yellow]No search vectors configured."
+            " Run 'getajob init' to set up defaults.[/]"
+        )
+        raise typer.Exit()
+
+    table = Table(title="Search Vectors", border_style="blue")
+    table.add_column("Name", style="cyan", no_wrap=True)
+    table.add_column("Keywords", style="green")
+    table.add_column("Locations", style="yellow")
+    table.add_column("Remote", justify="center")
+
+    for vec in vectors:
+        # Use explicit name or fall back to first two roles.
+        name = vec.get("name") or ", ".join(
+            vec.get("roles", ["(unnamed)"])[:2]
+        )
+        kw_list = vec.get("keywords", [])
+        keywords = ", ".join(kw_list[:5])
+        if len(kw_list) > 5:
+            keywords += "…"
+
+        loc_list = vec.get("locations", [])
+        locations = ", ".join(loc_list) if loc_list else "[dim]any[/]"
+
+        is_remote = any(
+            loc.strip().lower() == "remote" for loc in loc_list
+        )
+        remote_str = "[green]✓[/]" if is_remote else "[red]✗[/]"
+
+        table.add_row(name, keywords, locations, remote_str)
+
+    console.print(table)
+
+
+@vector_app.command(name="add")
+def vector_add() -> None:
+    """Add a new search vector with interactive prompts.
+
+    Walks through the required fields (name, keywords) and optional fields
+    (location, remote preference), then appends the new vector to the
+    search_vectors list in config/settings.yaml.
+    """
+    project_root = Path(__file__).resolve().parent.parent
+    yaml_path = project_root / "config" / "settings.yaml"
+
+    console.print(
+        Panel.fit(
+            "[bold green]+  Add Search Vector[/]", border_style="green"
+        )
+    )
+
+    # ── Interactive prompts ────────────────────────────────────────────
+    vec_name = typer.prompt("  Vector name")
+    console.print(
+        "  [dim]e.g. 'Backend Engineer' or 'Frontend Developer'[/]"
+    )
+
+    keywords_str = typer.prompt("  Keywords (comma-separated)")
+    console.print("  [dim]e.g. python, go, kubernetes, aws[/]")
+
+    location = typer.prompt(
+        "  Location (optional, press Enter to skip)", default=""
+    )
+    remote = typer.confirm("  Remote only?", default=True)
+
+    # ── Build vector ───────────────────────────────────────────────────
+    keywords = [k.strip() for k in keywords_str.split(",") if k.strip()]
+
+    locations: list[str] = []
+    if location.strip():
+        locations.append(location.strip())
+    if remote and "remote" not in [
+        loc.strip().lower() for loc in locations
+    ]:
+        locations.insert(0, "remote")
+
+    new_vector: dict[str, Any] = {
+        "name": vec_name,
+        "keywords": keywords,
+        "locations": locations,
+    }
+
+    # ── Read / update YAML ─────────────────────────────────────────────
+    if yaml_path.exists():
+        with yaml_path.open("r") as f:
+            data: dict[str, Any] = yaml.safe_load(f) or {}
+    else:
+        data = {}
+
+    vectors = data.setdefault("search_vectors", [])
+    vectors.append(new_vector)
+
+    with yaml_path.open("w") as f:
+        yaml.safe_dump(
+            data,
+            f,
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+        )
+
+    # ── Confirmation ───────────────────────────────────────────────────
+    console.print()
+    table = Table(border_style="green", show_header=False)
+    table.add_column("Field", style="bold cyan")
+    table.add_column("Value")
+    table.add_row("Name", vec_name)
+    table.add_row("Keywords", ", ".join(keywords))
+    table.add_row(
+        "Locations",
+        ", ".join(locations) if locations else "[dim]any[/]",
+    )
+    table.add_row(
+        "Remote", "[green]Yes[/]" if remote else "[red]No[/]"
+    )
+    console.print(table)
+    console.print(
+        f"\n[green]✓[/] Vector '[bold]{vec_name}[/]' added successfully."
+    )
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 
@@ -1037,6 +1377,9 @@ def _print_result_table(result: dict, title: str = "Results") -> None:
 
 
 # ── Entry point ─────────────────────────────────────────────────────────────
+
+app.add_typer(profile_app)
+app.add_typer(vector_app)
 
 if __name__ == "__main__":
     app()

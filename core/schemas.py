@@ -10,7 +10,7 @@ from __future__ import annotations as _annotations
 import datetime
 import uuid
 from collections.abc import Sequence
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -52,16 +52,13 @@ __all__: list[str] = [
     "WorkExperienceSchema",
 ]
 
-_T = TypeVar("_T")
-
-
 # ── Generic containers ───────────────────────────────────────────────────────────
 
 
-class PaginatedResponse(BaseModel, Generic[_T]):
+class PaginatedResponse[T](BaseModel):
     """Generic wrapper for paginated API responses."""
 
-    items: Sequence[_T]
+    items: Sequence[T]
     total: int
     page: int
     page_size: int

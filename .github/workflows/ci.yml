@@ -9,6 +9,24 @@
 #   typecheck  — mypy strict mode (10 min)
 #   test       — pytest with SQLite, coverage (15 min)
 #   security   — secrets scan, bandit, pip-audit (10 min)
+#
+# ── Auto-merge prerequisites ──────────────────────────────────────────────
+# To enable auto-merge for Dependabot PRs in the GitHub UI:
+#   1. Go to Settings → Branches → Add branch protection rule for `main`.
+#   2. Enable "Require a pull request before merging".
+#   3. Enable "Require approvals" (1 is sufficient for Dependabot).
+#   4. Enable "Require status checks to pass before merging".
+#   5. Add required checks (select from the job names below):
+#      - "Lint (ruff)"
+#      - "Type Check (mypy)"
+#      - "Tests (pytest)"
+#      - "Security Scan"
+#      - "CodeQL Analysis"
+#   6. Enable "Require branches to be up-to-date before merging".
+#   7. Optionally enable "Allow auto-merge" for convenience.
+#
+# With these settings, Dependabot PRs that pass CI will merge automatically
+# (or await approval if a review is also required).
 
 name: CI
 

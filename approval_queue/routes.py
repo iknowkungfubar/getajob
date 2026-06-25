@@ -84,6 +84,7 @@ async def dashboard_page(
         {
             "stats": stats,
             "applications": applications_data.get("items", []),
+            "demo_mode": db is None,
             "pagination": {
                 "page": applications_data.get("page", 1),
                 "total_pages": applications_data.get("total_pages", 1),
@@ -128,7 +129,7 @@ async def review_page(
     return templates.TemplateResponse(
         request,
         "review.html",
-        {"application": app_data},
+        {"application": app_data, "demo_mode": db is None},
     )
 
 
@@ -229,29 +230,35 @@ async def review_application(
     body: dict[str, Any],
     db: AsyncSession | None = Depends(get_db),
 ) -> JSONResponse:
-    """Process a review decision (approve or reject).
+    """Process a review decision (approve, reject, or reset).
 
     Request body::
 
-        {"action": "approve" | "reject", "reason": "optional reason"}
+        {"action": "approve" | "reject" | "reset", "reason": "optional reason"}
 
     On ``approve``: transitions state to ``STAGED``, creates an audit-log
     entry, and emits a ``review.approved`` event.
     On ``reject``: transitions to ``REJECTED`` with the given reason and
     emits a ``review.rejected`` event.
+    On ``reset``: transitions from ``REJECTED`` back to ``PENDING_REVIEW``
+    so the application can be re-evaluated.  Emits a ``review.reset`` event.
     """
     action: str | None = body.get("action")
     reason: str | None = body.get("reason")
 
-    if action not in ("approve", "reject"):
+    if action not in ("approve", "reject", "reset"):
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid action: {action!r}. Must be 'approve' or 'reject'.",
+            detail=f"Invalid action: {action!r}. Must be 'approve', 'reject', or 'reset'.",
         )
 
     if db is None:
         # UI-only mode: return a mock response.
-        new_state = ApplicationState.STAGED if action == "approve" else ApplicationState.REJECTED
+        new_state = {
+            "approve": ApplicationState.STAGED,
+            "reject": ApplicationState.REJECTED,
+            "reset": ApplicationState.PENDING_REVIEW,
+        }[action]
         logger.info(
             "Application reviewed (mock)",
             application_id=application_id,
@@ -272,60 +279,80 @@ async def review_application(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid application ID: {application_id!r}") from None
 
-    # Fetch the application with eager-loaded relationships.
-    query = (
-        select(Application)
-        .where(Application.id == app_uuid)
-        .options(selectinload(Application.job_listing))
-        .options(selectinload(Application.events))
-    )
-    rows = await db.execute(query)
-    app = rows.scalar_one_or_none()
+    # Determine target state from action.
+    target = {
+        "approve": ApplicationState.STAGED,
+        "reject": ApplicationState.REJECTED,
+        "reset": ApplicationState.PENDING_REVIEW,
+    }[action]
 
-    if app is None:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    # Determine target state.
-    target = ApplicationState.STAGED if action == "approve" else ApplicationState.REJECTED
-
-    # Validate the state-machine transition.
     try:
-        transition_state(app.state, target, application_id=application_id)
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-    # Persist the application state update with optimistic locking.
-    stmt = (
-        update(Application)
-        .where(Application.id == app_uuid)
-        .where(Application.state == app.state)
-        .values(state=target, notes=reason)
-    )
-    result = await db.execute(stmt)
-    if result.rowcount == 0:
-        raise HTTPException(
-            status_code=409,
-            detail="Application state changed concurrently — reload and try again",
+        # Fetch the application with eager-loaded relationships.
+        query = (
+            select(Application)
+            .where(Application.id == app_uuid)
+            .options(selectinload(Application.job_listing))
+            .options(selectinload(Application.events))
         )
+        rows = await db.execute(query)
+        app = rows.scalar_one_or_none()
 
-    # Create an audit-log event.
-    event_entry = ApplicationEvent(
-        application_id=app_uuid,
-        from_state=app.state,
-        to_state=target,
-        metadata_json={
-            "reason": reason,
-            "action": action,
-            "reviewer": "admin",
-        },
-    )
-    db.add(event_entry)
-    await db.commit()
+        if app is None:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        # Validate the state-machine transition.
+        try:
+            transition_state(app.state, target, application_id=application_id)
+        except Exception as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+        # Persist the application state update with optimistic locking.
+        stmt = (
+            update(Application)
+            .where(Application.id == app_uuid)
+            .where(Application.state == app.state)
+            .values(state=target, notes=reason)
+        )
+        result = await db.execute(stmt)
+        if result.rowcount == 0:
+            raise HTTPException(
+                status_code=409,
+                detail="Application state changed concurrently — reload and try again",
+            )
+
+        # Create an audit-log event.
+        event_entry = ApplicationEvent(
+            application_id=app_uuid,
+            from_state=app.state,
+            to_state=target,
+            metadata_json={
+                "reason": reason,
+                "action": action,
+                "reviewer": "admin",
+            },
+        )
+        db.add(event_entry)
+        await db.commit()
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(
+            "Database error during review",
+            application_id=application_id,
+            action=action,
+            error=str(exc),
+        )
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
     # Emit event on the bus (best-effort — does not block the response).
     try:
         event_bus = request.app.state.event_bus
-        event_type = EventType.REVIEW_APPROVED if action == "approve" else EventType.REVIEW_REJECTED
+        event_type = {
+            "approve": EventType.REVIEW_APPROVED,
+            "reject": EventType.REVIEW_REJECTED,
+            "reset": EventType.REVIEW_RESET,
+        }[action]
         await event_bus.publish(
             event_type,
             data={

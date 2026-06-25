@@ -81,6 +81,7 @@ class EventType:
     APPLICATION_TAILORED = "application.tailored"
     REVIEW_APPROVED = "review.approved"
     REVIEW_REJECTED = "review.rejected"
+    REVIEW_RESET = "review.reset"
     SUBMITTED = "application.submitted"
     SUBMISSION_FAILED = "application.submission_failed"
     OUTREACH_STAGED = "outreach.staged"
