@@ -652,7 +652,8 @@ class ContactFinder:
 
         for pattern in patterns:
             email = (
-                pattern.replace("firstname", first)
+                pattern
+                .replace("firstname", first)
                 .replace("lastname", last)
                 .replace("first", first)
                 .replace("last", last)

@@ -13,12 +13,14 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Callable, Coroutine
 from typing import Any, TypeVar, cast
 
-R = TypeVar("R")
-
 import structlog
 
 from core.config import get_settings
 from core.exceptions import ConfigurationError, TailoringError
+
+R = TypeVar("R")
+
+
 
 __all__: list[str] = [
     "ClaudeAPIClient",
