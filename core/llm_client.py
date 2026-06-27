@@ -13,15 +13,14 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Callable, Coroutine
 from typing import Any, TypeVar, cast
 
-R = TypeVar("R")
-
 import structlog
 
 from core.config import get_settings
 from core.exceptions import ConfigurationError, TailoringError
 
+R = TypeVar("R")
+
 __all__: list[str] = [
-    "ClaudeAPIClient",
     "LLMClient",
     "MockLLMClient",
     "get_llm_client",
@@ -265,7 +264,7 @@ class MockLLMClient(LLMClient):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
+        max_tokens: int | None = None,  # noqa: ARG002
         temperature: float | None = None,
     ) -> str:
         self.call_history.append({
@@ -282,8 +281,8 @@ class MockLLMClient(LLMClient):
         schema: dict[str, Any],
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
+        max_tokens: int | None = None,  # noqa: ARG002
+        temperature: float | None = None,  # noqa: ARG002
     ) -> dict[str, Any]:
         self.call_history.append({
             "method": "generate_structured",
@@ -299,7 +298,7 @@ class MockLLMClient(LLMClient):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
+        max_tokens: int | None = None,  # noqa: ARG002
     ) -> AsyncIterator[str]:
         self.call_history.append({"method": "generate_stream", "prompt": prompt, "system": system})
         text = self._lookup(prompt, system)

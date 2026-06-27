@@ -296,7 +296,7 @@ class TestFullPipeline:
         db_engine: AsyncEngine,
         recording_bus: RecordingEventBus,
         mock_llm: MockLLMClient,
-        seed_profile: uuid.UUID,
+        seed_profile: uuid.UUID,  # noqa: ARG002
         seed_listing: uuid.UUID,
     ) -> None:
         """Run the full pipeline and verify every stage completes correctly.
@@ -429,7 +429,7 @@ class TestFullPipeline:
         db_engine: AsyncEngine,
         recording_bus: RecordingEventBus,
         mock_llm: MockLLMClient,
-        seed_profile: uuid.UUID,
+        seed_profile: uuid.UUID,  # noqa: ARG002
         seed_listing: uuid.UUID,
     ) -> None:
         """Verify that jobs below the match threshold are skipped."""
@@ -535,8 +535,8 @@ class TestFullPipeline:
         db_engine: AsyncEngine,
         recording_bus: RecordingEventBus,
         mock_llm: MockLLMClient,
-        seed_profile: uuid.UUID,
-        seed_listing: uuid.UUID,
+        seed_profile: uuid.UUID,  # noqa: ARG002
+        seed_listing: uuid.UUID,  # noqa: ARG002
     ) -> None:
         """Verify that a failure in one job does not prevent others from
         processing (the orchestrator's 'isolated errors' guarantee)."""
@@ -591,9 +591,9 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_state_transition_invalid_rejected(
         self,
-        db_engine: AsyncEngine,
-        recording_bus: RecordingEventBus,
-        mock_llm: MockLLMClient,
+        db_engine: AsyncEngine,  # noqa: ARG002
+        recording_bus: RecordingEventBus,  # noqa: ARG002
+        mock_llm: MockLLMClient,  # noqa: ARG002
     ) -> None:
         """Verify that the state machine rejects invalid transitions."""
         # DISCOVERED → SUBMITTED is not allowed.
