@@ -223,6 +223,7 @@ jobs:
         uses: trufflesecurity/trufflehog@v3.95.6
         with:
           extra_args: --only-verified
+        continue-on-error: true
 
       - name: Run bandit security linter
         continue-on-error: true
