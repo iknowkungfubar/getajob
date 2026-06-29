@@ -97,7 +97,7 @@ lint.ignore = [
 ]
 
 # Allow per-file ignores
-lint.per-file-ignores = { "tests/*" = ["S101"] }
+lint.per-file-ignores = { "tests/*" = ["S101", "ARG002"] }
 
 [tool.ruff.format]
 # Use Black-compatible formatting
