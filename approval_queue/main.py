@@ -254,7 +254,10 @@ async def login(request: Request) -> Response:
     logger.warning("Failed login attempt")
     template = getattr(request.app.state, "templates", None)
     if template is not None:
-        return cast(Response, template.TemplateResponse(request, "login.html", {"error": "Invalid password"}))
+        return cast(
+            Response,
+            template.TemplateResponse(request, "login.html", {"error": "Invalid password"}),
+        )
     return _fallback_login_html(error="Invalid password")
 
 
