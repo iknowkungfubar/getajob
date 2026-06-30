@@ -13,12 +13,12 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Callable, Coroutine
 from typing import Any, TypeVar, cast
 
-R = TypeVar("R")
-
 import structlog
 
 from core.config import get_settings
 from core.exceptions import ConfigurationError, TailoringError
+
+R = TypeVar("R")
 
 __all__: list[str] = [
     "ClaudeAPIClient",
@@ -50,8 +50,8 @@ class LLMClient(ABC):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
+        _max_tokens: int | None = None,
+        _temperature: float | None = None,
     ) -> str:
         """Send a text prompt and return the generated completion.
 
@@ -72,8 +72,8 @@ class LLMClient(ABC):
         schema: dict[str, Any],
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
+        _max_tokens: int | None = None,
+        _temperature: float | None = None,
     ) -> dict[str, Any]:
         """Send a prompt and receive a structured JSON response matching *schema*.
 
@@ -94,7 +94,7 @@ class LLMClient(ABC):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
+        _max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         """Stream tokens from the model one chunk at a time.
 
@@ -180,15 +180,15 @@ class ClaudeAPIClient(LLMClient):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
+        _max_tokens: int | None = None,
+        _temperature: float | None = None,
     ) -> str:
         async def _call() -> str:
             client = self._lazy_client()
             resp = await client.messages.create(
                 model=self._model,
-                max_tokens=max_tokens or self._max_tokens,
-                temperature=temperature if temperature is not None else 0.7,
+                max_tokens=_max_tokens or self._max_tokens,
+                temperature=_temperature if _temperature is not None else 0.7,
                 system=system or "",
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -202,15 +202,15 @@ class ClaudeAPIClient(LLMClient):
         _schema: dict[str, Any],
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
+        _max_tokens: int | None = None,
+        _temperature: float | None = None,
     ) -> dict[str, Any]:
         async def _call() -> dict[str, Any]:
             client = self._lazy_client()
             resp = await client.messages.create(
                 model=self._model,
-                max_tokens=max_tokens or self._max_tokens,
-                temperature=temperature if temperature is not None else 0.7,
+                max_tokens=_max_tokens or self._max_tokens,
+                temperature=_temperature if _temperature is not None else 0.7,
                 system=system or "",
                 messages=[{"role": "user", "content": prompt}],
                 # Instruct the model to return a valid JSON object.
@@ -233,12 +233,12 @@ class ClaudeAPIClient(LLMClient):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
+        _max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         client = self._lazy_client()
         async with client.messages.stream(
             model=self._model,
-            max_tokens=max_tokens or self._max_tokens,
+            max_tokens=_max_tokens or self._max_tokens,
             system=system or "",
             messages=[{"role": "user", "content": prompt}],
         ) as stream:
@@ -265,14 +265,14 @@ class MockLLMClient(LLMClient):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
+        _max_tokens: int | None = None,
+        _temperature: float | None = None,
     ) -> str:
         self.call_history.append({
             "method": "generate_text",
             "prompt": prompt,
             "system": system,
-            "temperature": temperature,
+            "temperature": _temperature,
         })
         return self._lookup(prompt, system)
 
@@ -282,8 +282,8 @@ class MockLLMClient(LLMClient):
         schema: dict[str, Any],
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
+        _max_tokens: int | None = None,
+        _temperature: float | None = None,
     ) -> dict[str, Any]:
         self.call_history.append({
             "method": "generate_structured",
@@ -299,7 +299,7 @@ class MockLLMClient(LLMClient):
         prompt: str,
         *,
         system: str | None = None,
-        max_tokens: int | None = None,
+        _max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         self.call_history.append({"method": "generate_stream", "prompt": prompt, "system": system})
         text = self._lookup(prompt, system)

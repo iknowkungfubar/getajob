@@ -381,9 +381,11 @@ class FormFiller:
         # Wait for navigation or confirmation.
         try:
             await self._page.wait_for_url(
-                lambda url: "confirmation" in url.lower()
-                or "thank" in url.lower()
-                or "success" in url.lower(),
+                lambda url: (
+                    "confirmation" in url.lower()
+                    or "thank" in url.lower()
+                    or "success" in url.lower()
+                ),
                 timeout=int(wait_for_confirmation_s * 1000),
             )
         except Exception:

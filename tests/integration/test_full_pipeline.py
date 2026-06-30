@@ -293,11 +293,11 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_run_once_full_pipeline(
         self,
-        db_engine: AsyncEngine,
-        recording_bus: RecordingEventBus,
-        mock_llm: MockLLMClient,
-        seed_profile: uuid.UUID,
-        seed_listing: uuid.UUID,
+        _db_engine: AsyncEngine,
+        _recording_bus: RecordingEventBus,
+        _mock_llm: MockLLMClient,
+        _seed_profile: uuid.UUID,
+        _seed_listing: uuid.UUID,
     ) -> None:
         """Run the full pipeline and verify every stage completes correctly.
 
@@ -426,11 +426,11 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_low_match_job_skipped(
         self,
-        db_engine: AsyncEngine,
-        recording_bus: RecordingEventBus,
-        mock_llm: MockLLMClient,
-        seed_profile: uuid.UUID,
-        seed_listing: uuid.UUID,
+        _db_engine: AsyncEngine,
+        _recording_bus: RecordingEventBus,
+        _mock_llm: MockLLMClient,
+        _seed_profile: uuid.UUID,
+        _seed_listing: uuid.UUID,
     ) -> None:
         """Verify that jobs below the match threshold are skipped."""
         orchestrator = OrchestratorAgent(
@@ -477,11 +477,11 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_no_unwatched_listings(
         self,
-        db_engine: AsyncEngine,
-        recording_bus: RecordingEventBus,
-        mock_llm: MockLLMClient,
-        seed_profile: uuid.UUID,
-        seed_listing: uuid.UUID,
+        _db_engine: AsyncEngine,
+        _recording_bus: RecordingEventBus,
+        _mock_llm: MockLLMClient,
+        _seed_profile: uuid.UUID,
+        _seed_listing: uuid.UUID,
     ) -> None:
         """Verify the pipeline handles the no-unwatched-listings case gracefully.
 
@@ -532,11 +532,11 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_isolated_job_failure(
         self,
-        db_engine: AsyncEngine,
-        recording_bus: RecordingEventBus,
-        mock_llm: MockLLMClient,
-        seed_profile: uuid.UUID,
-        seed_listing: uuid.UUID,
+        _db_engine: AsyncEngine,
+        _recording_bus: RecordingEventBus,
+        _mock_llm: MockLLMClient,
+        _seed_profile: uuid.UUID,
+        _seed_listing: uuid.UUID,
     ) -> None:
         """Verify that a failure in one job does not prevent others from
         processing (the orchestrator's 'isolated errors' guarantee)."""
@@ -591,9 +591,9 @@ class TestFullPipeline:
     @pytest.mark.asyncio
     async def test_state_transition_invalid_rejected(
         self,
-        db_engine: AsyncEngine,
-        recording_bus: RecordingEventBus,
-        mock_llm: MockLLMClient,
+        _db_engine: AsyncEngine,
+        _recording_bus: RecordingEventBus,
+        _mock_llm: MockLLMClient,
     ) -> None:
         """Verify that the state machine rejects invalid transitions."""
         # DISCOVERED → SUBMITTED is not allowed.
