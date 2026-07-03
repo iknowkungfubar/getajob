@@ -40,6 +40,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.12"
   PYTHONUNBUFFERED: "1"
@@ -125,6 +128,7 @@ jobs:
     permissions:
       security-events: write
       actions: read
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:

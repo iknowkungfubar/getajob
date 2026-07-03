@@ -146,8 +146,16 @@ def init(
 
     # ── Step 2: LLM provider & API key ────────────────────────────────────
     console.print("\n[bold]🤖  LLM Configuration[/]")
-    provider = typer.prompt("  LLM provider", default="anthropic")
-    api_key = typer.prompt("  API key", hide_input=True)
+
+    # ponytail: prefer env var over file storage for secrets
+    existing_key = os.environ.get("GETAJOB_LLM__API_KEY")
+    if existing_key:
+        api_key = existing_key
+        provider = os.environ.get("GETAJOB_LLM__PROVIDER", "anthropic")
+        console.print("  [dim]Using GETAJOB_LLM__API_KEY from environment[/]")
+    else:
+        provider = typer.prompt("  LLM provider", default="anthropic")
+        api_key = typer.prompt("  API key", hide_input=True)
 
     # ── Step 3: Write .env file ────────────────────────────────────────────
     model = "claude-sonnet-4-6" if provider.lower() in ("anthropic", "claude") else "gpt-4o"
@@ -173,7 +181,7 @@ GETAJOB_DATABASE__MAX_CONNECTIONS=10
 
 # -- LLM -----------------------------------------------------------------------
 GETAJOB_LLM__PROVIDER={provider}
-GETAJOB_LLM__API_KEY={api_key}
+GETAJOB_LLM__API_KEY={api_key if not existing_key else ''}
 GETAJOB_LLM__MODEL={model}
 GETAJOB_LLM__MAX_TOKENS=4096
 GETAJOB_LLM__TEMPERATURE=0.7
@@ -202,6 +210,7 @@ GETAJOB_BROWSER__NAVIGATION_TIMEOUT_SECONDS=30
 GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY=50
 """
     env_path.write_text(env_content)
+    env_path.chmod(0o600)
     console.print(f"  [green]✓[/] Configuration written: {env_path}")
 
     # ── Step 4: User profile (optional) ───────────────────────────────────
