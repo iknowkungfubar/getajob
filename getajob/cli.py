@@ -181,7 +181,7 @@ GETAJOB_DATABASE__MAX_CONNECTIONS=10
 
 # -- LLM -----------------------------------------------------------------------
 GETAJOB_LLM__PROVIDER={provider}
-GETAJOB_LLM__API_KEY={api_key if not existing_key else ''}
+GETAJOB_LLM__API_KEY={api_key if not existing_key else ""}
 GETAJOB_LLM__MODEL={model}
 GETAJOB_LLM__MAX_TOKENS=4096
 GETAJOB_LLM__TEMPERATURE=0.7
