@@ -157,18 +157,15 @@ async def get_stats(
     _request: Request,
     db: AsyncSession | None = Depends(get_db),
 ) -> dict[str, Any]:
-    """Return aggregate statistics for the dashboard.
-
-    Returns counts per state and today's submission/approval rates.
-    """
+    """Return aggregate statistics for the dashboard."""
     if db is None:
-        return _mock_stats()
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
         return await _fetch_stats(db)
     except Exception as exc:
         logger.error("Failed to fetch stats", error=str(exc))
-        return _mock_stats()
+        raise HTTPException(status_code=503, detail=f"Database query failed: {exc}")
 
 
 # ── API: Applications ───────────────────────────────────────────────────────
@@ -193,7 +190,7 @@ async def list_applications(
         Dict with ``items``, ``total``, ``page``, ``page_size``, ``total_pages``.
     """
     if db is None:
-        return _mock_applications(state, limit, offset)
+                    raise HTTPException(status_code=503, detail="Database unavailable")  # was: return _mock_applications(state, limit, offset)
 
     try:
         return await _fetch_applications(db, state, limit, offset)
@@ -216,7 +213,7 @@ async def get_application(
     info.
     """
     if db is None:
-        return _mock_application_detail(application_id)
+        raise HTTPException(status_code=503, detail="Database unavailable")  # was: return _mock_application_detail(application_id)
 
     try:
         app_uuid = uuid.UUID(application_id)
@@ -509,14 +506,13 @@ async def get_config(_request: Request) -> dict[str, Any]:
 # ── Data-fetching helpers ───────────────────────────────────────────────────
 
 
-async def _fetch_stats(db: AsyncSession | None) -> dict[str, Any]:
-    """Query aggregate statistics from the database.
-
-    Falls back to mock data when *db* is ``None`` or the tables do not
-    exist yet (e.g. before ``getajob setup`` has been run).
+async def _fetch_stats(db: AsyncSession) -> dict[str, Any]:
+    """Return aggregate statistics for the dashboard from the database.
+    
+    Raises HTTPException(503) if the database is unavailable.
     """
     if db is None:
-        return _mock_stats()
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
     today_start = datetime.datetime.now(datetime.UTC).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -571,7 +567,7 @@ async def _fetch_applications(
     to mock data when *db* is ``None`` or tables do not exist yet.
     """
     if db is None:
-        return _mock_applications(state_filter, limit, offset)
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
     conditions: list[ColumnElement[bool]] = [Application.profile_id.isnot(None)]
 
@@ -710,179 +706,7 @@ def _application_to_dict(app: Application, *, include_details: bool = False) -> 
 
     return app_dict
 
-
-# ── Mock data (UI-only mode) ────────────────────────────────────────────────
-
-
-def _mock_stats() -> dict[str, Any]:
-    """Return plausible mock statistics when no database is available."""
-    return {
-        "state_counts": {
-            "PENDING_REVIEW": 3,
-            "STAGED": 1,
-            "SUBMITTED": 5,
-            "REJECTED": 2,
-            "FAILED": 0,
-            "TAILORED": 4,
-            "DISCOVERED": 6,
-            "OUTREACH_PENDING": 0,
-        },
-        "today_counts": {
-            "STAGED": 1,
-            "SUBMITTED": 3,
-        },
-        "total": 21,
-        "pending_review": 3,
-        "approved_today": 4,
-        "submitted": 5,
-        "submitted_today": 3,
-        "failed": 0,
-        "rejected": 2,
-        "tailored": 4,
-        "discovered": 6,
-    }
+# ── Helper ────────────────────────────────────────────────────────────────────
+# (mock fallbacks removed — see C2 of architecture audit)
 
 
-def _mock_applications(state: str | None, limit: int, _offset: int) -> dict[str, Any]:
-    """Return mock applications when no database is available."""
-    states = [
-        ApplicationState.PENDING_REVIEW,
-        ApplicationState.STAGED,
-        ApplicationState.SUBMITTED,
-    ]
-    companies = [
-        "Acme Corp",
-        "TechCo Inc",
-        "DataFlow Systems",
-        "CloudBase",
-        "AI Systems",
-        "Quantum Labs",
-        "NexGen Software",
-        "Pinnacle Analytics",
-    ]
-    titles = [
-        "Senior Backend Engineer",
-        "Staff Software Engineer",
-        "Principal Architect",
-        "ML Platform Engineer",
-        "Distributed Systems Engineer",
-        "Lead DevOps Engineer",
-        "Senior Frontend Engineer",
-        "Data Platform Engineer",
-    ]
-    locations = ["Remote", "San Francisco, CA", "New York, NY", "Austin, TX"]
-    now = datetime.datetime.now(datetime.UTC)
-
-    import random
-
-    random.seed(42)
-
-    items: list[dict[str, Any]] = []
-    total = min(15, limit)
-
-    for i in range(total):
-        c = companies[i % len(companies)]
-        t = titles[i % len(titles)]
-        loc = locations[i % len(locations)]
-        s = states[i % len(states)]
-
-        # Override state if filter is active.
-        if state and s.value != state.upper():
-            s = ApplicationState.PENDING_REVIEW
-
-        items.append({
-            "id": str(uuid.uuid4()),
-            "state": s.value,
-            "job_listing": {
-                "company": c,
-                "title": t,
-                "location": loc,
-            },
-            "created_at": (now - datetime.timedelta(hours=i * 2)).isoformat(),
-            "updated_at": (now - datetime.timedelta(hours=i)).isoformat(),
-        })
-
-    return {
-        "items": items,
-        "total": len(items),
-        "page": 1,
-        "page_size": limit,
-        "total_pages": 1,
-    }
-
-
-def _mock_application_detail(application_id: str) -> dict[str, Any]:
-    """Return a detailed mock application for the review page."""
-    return {
-        "id": application_id,
-        "state": ApplicationState.PENDING_REVIEW.value,
-        "resume_text": (
-            "## Experience\n\n"
-            "**Senior Software Engineer** - Acme Corp (2021 - Present)\n"
-            "- Led migration of monolithic payment processing to Rust-based microservices architecture\n"
-            "- Reduced P99 latency by 40% through connection pooling and query optimisation\n"
-            "- Designed distributed task queue handling 1M+ jobs/day\n\n"
-            "**Software Engineer** - StartUp Inc (2018 - 2021)\n"
-            "- Built real-time data pipeline processing 10GB/day using Kafka and Flink\n"
-            "- Developed internal CLI tools that reduced deployment time by 60%\n\n"
-            "## Skills\n\n"
-            "Rust, Python, Go, Kubernetes, PostgreSQL, Redis, Kafka, gRPC, TensorFlow"
-        ),
-        "cover_letter": (
-            "I'm writing regarding the Senior Backend Engineer role at Acme Corp. "
-            "My background in distributed systems and Rust aligns closely with what "
-            "your team is building.\n\n"
-            "At my current role I led a migration from a monolith to microservices "
-            "that cut latency by 40%. I've been following Acme's work on real-time "
-            "data processing and would welcome the chance to contribute.\n\n"
-            "Thanks for your consideration."
-        ),
-        "job_listing": {
-            "company": "Acme Corp",
-            "title": "Senior Backend Engineer",
-            "location": "Remote",
-            "url": "https://careers.acme.corp/123",
-            "source": "linkedin",
-            "required_skills": ["Rust", "Python", "Kubernetes", "PostgreSQL"],
-            "posted_date": (
-                datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=7)
-            ).isoformat(),
-        },
-        "recruiter_name": "Jane Smith",
-        "recruiter_email": "jane.smith@acme.example",
-        "events": [
-            {
-                "id": str(uuid.uuid4()),
-                "from_state": None,
-                "to_state": ApplicationState.DISCOVERED.value,
-                "timestamp": (
-                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=48)
-                ).isoformat(),
-                "metadata": {"source": "linkedin"},
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "from_state": ApplicationState.DISCOVERED.value,
-                "to_state": ApplicationState.TAILORED.value,
-                "timestamp": (
-                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=24)
-                ).isoformat(),
-                "metadata": {"match_score": 0.85},
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "from_state": ApplicationState.TAILORED.value,
-                "to_state": ApplicationState.PENDING_REVIEW.value,
-                "timestamp": (
-                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=6)
-                ).isoformat(),
-                "metadata": {},
-            },
-        ],
-        "created_at": (
-            datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=48)
-        ).isoformat(),
-        "updated_at": (
-            datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=6)
-        ).isoformat(),
-    }
