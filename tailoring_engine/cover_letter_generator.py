@@ -326,7 +326,7 @@ class CoverLetterGenerator:
             A dict with tailoring defaults (empty dict if not configured).
         """
         overlay = load_config()
-        return overlay.get("tailoring", {})
+        return overlay.get("tailoring", {})  # type: ignore[no-any-return]
 
     # ── Default system prompt (fallback) ────────────────────────────────────────
 
