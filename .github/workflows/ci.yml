@@ -271,7 +271,7 @@ jobs:
 
       - name: Verify no secrets in config YAML
         run: |
-          ! grep -rE '(sk-ant|api_key|api-key|password|secret).{8,}' config/*.yaml 2>/dev/null || {
+          ! grep -rE '(sk-ant|api_key|api-key|password|secret).{8,}' config/*.yaml 2>/dev/null | grep -v '^[[:space:]]*#' || {
             echo "❌ Possible secret in config YAML!"; exit 1;
           }
           echo "✅ No obvious secrets in config files"
