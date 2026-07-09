@@ -1,36 +1,19 @@
-"""GetAJob CLI - command-line interface for the job application platform.
+"""CLI command functions for getajob.
 
-Usage
------
-    # Run the full pipeline (discover -> tailor -> stage)
-    python -m getajob.cli run
-
-    # Discover jobs only
-    python -m getajob.cli discover
-
-    # Tailor a specific job
-    python -m getajob.cli tailor <job-id>
-
-    # Start the approval queue web UI
-    python -m getajob.cli serve
-
-    # First-time setup (create tables, etc.)
-    python -m getajob.cli setup
+Each function is a typer command registered on the shared ``app`` instance.
+Extracted from the monolithic cli.py for maintainability.
 """
-
 from __future__ import annotations as _annotations
 
 import asyncio
+import importlib.util
 import os
+import shutil
 import sys
-from collections.abc import Coroutine
 from pathlib import Path
-from typing import Any
 
 import structlog
 import typer
-import yaml
-from rich.console import Console
 from rich.panel import Panel
 from rich.progress import (
     Progress,
@@ -45,66 +28,15 @@ from core.database import create_engine, run_migrations
 from core.event_bus import InMemoryEventBus
 from core.llm_client import get_llm_client
 
-__all__: list[str] = [
-    "app",
-]
-
-# ── Logger ───────────────────────────────────────────────────────────────────
+from ._app import app, console, err_console
+from .helpers import (
+    _check_settings,
+    _print_result_table,
+    _run_async,
+    _write_default_search_vectors,
+)
 
 logger = structlog.get_logger(__name__)
-
-# ── Typer app ────────────────────────────────────────────────────────────────
-
-app = typer.Typer(
-    name="getajob",
-    help="GetAJob - automated job application platform",
-    add_completion=False,
-    pretty_exceptions_show_locals=False,
-)
-
-console = Console()
-err_console = Console(stderr=True)
-
-# ── Vector sub-app ───────────────────────────────────────────────────────────
-
-vector_app = typer.Typer(
-    name="vector",
-    help="Manage search vectors.",
-)
-
-profile_app = typer.Typer(
-    name="profile",
-    help="Manage user profile.",
-)
-
-
-# ── Utility ──────────────────────────────────────────────────────────────────
-
-
-def _version_callback(value: bool) -> None:
-    if value:
-        from getajob import __version__
-
-        console.print(f"GetAJob v{__version__}")
-        raise typer.Exit()
-
-
-# ── Commands ─────────────────────────────────────────────────────────────────
-
-
-@app.callback()
-def _main(
-    version: bool = typer.Option(
-        False,
-        "--version",
-        "-V",
-        help="Show version and exit.",
-        callback=_version_callback,
-        is_eager=True,
-    ),
-) -> None:
-    """GetAJob -- automated, agentic job application platform for 2026."""
-    pass
 
 
 # ── Init (first-run wizard) ─────────────────────────────────────────────────
@@ -131,7 +63,7 @@ def init(
         )
     )
 
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     env_path = project_root / ".env"
 
     # ── Step 1: Check for existing .env ──────────────────────────────────
@@ -296,6 +228,9 @@ GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY=50
     )
 
 
+# ── discover command ─────────────────────────────────────────────────────────
+
+
 @app.command()
 def discover(
     _ctx: typer.Context,
@@ -362,6 +297,9 @@ def discover(
             await orchestrator.stop()
 
     _run_async(_run())
+
+
+# ── tailor command ───────────────────────────────────────────────────────────
 
 
 @app.command()
@@ -479,6 +417,9 @@ def tailor(
     _run_async(_run())
 
 
+# ── run command ──────────────────────────────────────────────────────────────
+
+
 @app.command()
 def run(
     _ctx: typer.Context,
@@ -543,6 +484,9 @@ def run(
     _run_async(_run())
 
 
+# ── serve command ────────────────────────────────────────────────────────────
+
+
 @app.command()
 def serve(
     host: str = typer.Option(
@@ -581,6 +525,9 @@ def serve(
         log_level="debug" if settings.debug else "info",
         proxy_headers=True,
     )
+
+
+# ── doctor command ───────────────────────────────────────────────────────────
 
 
 @app.command()
@@ -678,7 +625,7 @@ def doctor() -> None:
                 critical_fail = True
 
         # ── 4. Config files ────────────────────────────────────────────────
-        project_root = Path(__file__).resolve().parent.parent
+        project_root = Path(__file__).resolve().parent.parent.parent
         env_ok = (project_root / ".env").exists()
         yaml_ok = (project_root / "config" / "settings.yaml").exists()
         tpl_ok = (project_root / "env.template").exists()
@@ -691,8 +638,6 @@ def doctor() -> None:
         checks.append(("Config Files", "✅" if env_ok else "⚠", "  ".join(parts)))
 
         # ── 5. Browser (Playwright) ─────────────────────────────────────────
-        import importlib.util
-
         playwright_ok = importlib.util.find_spec("playwright") is not None
 
         if playwright_ok:
@@ -726,8 +671,6 @@ def doctor() -> None:
             checks.append(("Data Directories", "✅", detail))
 
         # ── 7. Docker (optional) ───────────────────────────────────────────
-        import shutil
-
         docker_path = shutil.which("docker")
         if docker_path:
             checks.append(("Docker", "✅", f"Found: {docker_path}"))
@@ -735,6 +678,7 @@ def doctor() -> None:
             checks.append(("Docker", "-", "Not found (optional)"))
 
         # ── Render table ──────────────────────────────────────────────────
+
         table = Table(title="System Health", border_style="blue")
         table.add_column("Check", style="cyan", no_wrap=True)
         table.add_column("Status", justify="center")
@@ -781,6 +725,9 @@ def doctor() -> None:
             )
 
     _run_async(_run())
+
+
+# ── setup command ────────────────────────────────────────────────────────────
 
 
 @app.command()
@@ -858,436 +805,3 @@ def setup(
             await engine.dispose()
 
     _run_async(_run())
-
-
-# ── Profile commands ───────────────────────────────────────────────────────
-
-
-@profile_app.command()
-def show() -> None:
-    """Show the currently active profile.
-
-    Displays name, email, location, skills, and work authorisation
-    from the database in a formatted table.
-    """
-
-    async def _run() -> None:
-        engine = None
-        try:
-            from core.database import create_engine
-            from profile_engine.profile_store import ProfileStore
-
-            engine = create_engine()
-            store = ProfileStore(engine)
-            profiles = await store.list_profiles(limit=1)
-
-            if not profiles:
-                console.print("[yellow]No profile configured. Run 'getajob init' to create one.[/]")
-                return
-
-            profile = profiles[0]
-
-            table = Table(title="User Profile", border_style="blue")
-            table.add_column("Field", style="cyan", no_wrap=True)
-            table.add_column("Value")
-
-            table.add_row("Name", profile.name or "")
-            table.add_row("Email", profile.email or "")
-            table.add_row("Location", profile.location or "[dim]not set[/]")
-
-            if profile.skills:
-                skills_str = ", ".join(s.name for s in profile.skills)
-            else:
-                skills_str = "[dim]none[/]"
-            table.add_row("Skills", skills_str)
-            table.add_row("Work Authorization", profile.work_authorization or "[dim]not set[/]")
-
-            console.print(table)
-        except Exception as exc:
-            err_console.print(f"[red]✗[/] Could not load profile: {exc}")
-        finally:
-            if engine is not None:
-                await engine.dispose()
-
-    _run_async(_run())
-
-
-@profile_app.command()
-def update() -> None:
-    """Update profile fields via interactive prompts.
-
-    Shows current values; press Enter to keep a field unchanged.
-    Only changed fields are sent to the database.
-    """
-
-    async def _run() -> None:
-        engine = None
-        try:
-            from core.database import create_engine
-            from core.schemas import ProfileUpdate, SkillSchema
-            from profile_engine.profile_store import ProfileStore
-
-            engine = create_engine()
-            store = ProfileStore(engine)
-            profiles = await store.list_profiles(limit=1)
-
-            if not profiles:
-                console.print(
-                    "[yellow]No profile configured. Run 'getajob init' to create one first.[/]"
-                )
-                return
-
-            current = profiles[0]
-            console.print(Panel.fit("[bold cyan]✏️  Update Profile[/]", border_style="cyan"))
-            console.print("[dim]Press Enter to keep the current value.[/]\n")
-
-            # Interactive prompts with current values as defaults.
-            name = typer.prompt("  Name", default=current.name or "")
-            email = typer.prompt("  Email", default=current.email or "")
-            location = typer.prompt("  Location", default=current.location or "")
-
-            current_skills_str = ", ".join(s.name for s in current.skills) if current.skills else ""
-            skills_str = typer.prompt("  Skills (comma-separated)", default=current_skills_str)
-
-            work_auth = typer.prompt(
-                "  Work Authorization", default=current.work_authorization or ""
-            )
-
-            # Build update payload with only changed fields.
-            update_data: dict[str, Any] = {}
-
-            if name.strip() and name.strip() != (current.name or ""):
-                update_data["name"] = name.strip()
-            if email.strip() and email.strip() != (current.email or ""):
-                update_data["email"] = email.strip()
-            if location.strip() and location.strip() != (current.location or ""):
-                update_data["location"] = location.strip()
-
-            # Skills: comma-separated string -> list[SkillSchema].
-            if skills_str.strip():
-                new_skills = [s.strip() for s in skills_str.split(",") if s.strip()]
-                old_skills = [s.name for s in current.skills] if current.skills else []
-                if new_skills != old_skills:
-                    update_data["skills"] = [SkillSchema(name=s) for s in new_skills]
-            elif current.skills:
-                # User explicitly cleared the skills field.
-                update_data["skills"] = []
-
-            if work_auth.strip() and work_auth.strip() != (current.work_authorization or ""):
-                update_data["work_authorization"] = work_auth.strip()
-            elif not work_auth.strip() and current.work_authorization:
-                update_data["work_authorization"] = ""
-
-            if not update_data:
-                console.print("[yellow]No changes made.[/]")
-                return
-
-            updated = await store.update_profile(
-                current.id,
-                ProfileUpdate(**update_data),
-            )
-
-            # Confirmation table.
-            field_labels = {
-                "name": "Name",
-                "email": "Email",
-                "location": "Location",
-                "skills": "Skills",
-                "work_authorization": "Work Authorization",
-            }
-            updated_values = {
-                "name": updated.name or "",
-                "email": updated.email or "",
-                "location": updated.location or "",
-                "skills": (
-                    ", ".join(s.name for s in updated.skills) if updated.skills else "[dim]none[/]"
-                ),
-                "work_authorization": updated.work_authorization or "[dim]not set[/]",
-            }
-
-            console.print("\n[green]✓[/] Profile updated successfully.")
-            table = Table(border_style="green", show_header=False)
-            table.add_column("Field", style="bold cyan")
-            table.add_column("Value")
-
-            for field_name in update_data:
-                table.add_row(
-                    field_labels.get(field_name, field_name.capitalize()),
-                    updated_values.get(field_name, ""),
-                )
-
-            console.print(table)
-        except Exception as exc:
-            err_console.print(f"[red]✗[/] Could not update profile: {exc}")
-        finally:
-            if engine is not None:
-                await engine.dispose()
-
-    _run_async(_run())
-
-
-# ── Vector commands ─────────────────────────────────────────────────────────
-
-
-@vector_app.command(name="list")
-def vector_list() -> None:
-    """List all configured search vectors from config/settings.yaml.
-
-    Displays a Rich-formatted table with name, keywords, locations, and
-    remote preference for each configured search vector.
-    """
-    project_root = Path(__file__).resolve().parent.parent
-    yaml_path = project_root / "config" / "settings.yaml"
-
-    if not yaml_path.exists():
-        console.print(
-            "[yellow]No search vectors configured. Run 'getajob init' to set up defaults.[/]"
-        )
-        raise typer.Exit()
-
-    with yaml_path.open("r") as f:
-        data = yaml.safe_load(f) or {}
-
-    vectors = data.get("search_vectors", [])
-    if not vectors:
-        console.print(
-            "[yellow]No search vectors configured. Run 'getajob init' to set up defaults.[/]"
-        )
-        raise typer.Exit()
-
-    table = Table(title="Search Vectors", border_style="blue")
-    table.add_column("Name", style="cyan", no_wrap=True)
-    table.add_column("Keywords", style="green")
-    table.add_column("Locations", style="yellow")
-    table.add_column("Remote", justify="center")
-
-    for vec in vectors:
-        # Use explicit name or fall back to first two roles.
-        name = vec.get("name") or ", ".join(vec.get("roles", ["(unnamed)"])[:2])
-        kw_list = vec.get("keywords", [])
-        keywords = ", ".join(kw_list[:5])
-        if len(kw_list) > 5:
-            keywords += "…"
-
-        loc_list = vec.get("locations", [])
-        locations = ", ".join(loc_list) if loc_list else "[dim]any[/]"
-
-        is_remote = any(loc.strip().lower() == "remote" for loc in loc_list)
-        remote_str = "[green]✓[/]" if is_remote else "[red]✗[/]"
-
-        table.add_row(name, keywords, locations, remote_str)
-
-    console.print(table)
-
-
-@vector_app.command(name="add")
-def vector_add() -> None:
-    """Add a new search vector with interactive prompts.
-
-    Walks through the required fields (name, keywords) and optional fields
-    (location, remote preference), then appends the new vector to the
-    search_vectors list in config/settings.yaml.
-    """
-    project_root = Path(__file__).resolve().parent.parent
-    yaml_path = project_root / "config" / "settings.yaml"
-
-    console.print(Panel.fit("[bold green]+  Add Search Vector[/]", border_style="green"))
-
-    # ── Interactive prompts ────────────────────────────────────────────
-    vec_name = typer.prompt("  Vector name")
-    console.print("  [dim]e.g. 'Backend Engineer' or 'Frontend Developer'[/]")
-
-    keywords_str = typer.prompt("  Keywords (comma-separated)")
-    console.print("  [dim]e.g. python, go, kubernetes, aws[/]")
-
-    location = typer.prompt("  Location (optional, press Enter to skip)", default="")
-    remote = typer.confirm("  Remote only?", default=True)
-
-    # ── Build vector ───────────────────────────────────────────────────
-    keywords = [k.strip() for k in keywords_str.split(",") if k.strip()]
-
-    locations: list[str] = []
-    if location.strip():
-        locations.append(location.strip())
-    if remote and "remote" not in [loc.strip().lower() for loc in locations]:
-        locations.insert(0, "remote")
-
-    new_vector: dict[str, Any] = {
-        "name": vec_name,
-        "keywords": keywords,
-        "locations": locations,
-    }
-
-    # ── Read / update YAML ─────────────────────────────────────────────
-    if yaml_path.exists():
-        with yaml_path.open("r") as f:
-            data: dict[str, Any] = yaml.safe_load(f) or {}
-    else:
-        data = {}
-
-    vectors = data.setdefault("search_vectors", [])
-    vectors.append(new_vector)
-
-    with yaml_path.open("w") as f:
-        yaml.safe_dump(
-            data,
-            f,
-            default_flow_style=False,
-            sort_keys=False,
-            allow_unicode=True,
-        )
-
-    # ── Confirmation ───────────────────────────────────────────────────
-    console.print()
-    table = Table(border_style="green", show_header=False)
-    table.add_column("Field", style="bold cyan")
-    table.add_column("Value")
-    table.add_row("Name", vec_name)
-    table.add_row("Keywords", ", ".join(keywords))
-    table.add_row(
-        "Locations",
-        ", ".join(locations) if locations else "[dim]any[/]",
-    )
-    table.add_row("Remote", "[green]Yes[/]" if remote else "[red]No[/]")
-    console.print(table)
-    console.print(f"\n[green]✓[/] Vector '[bold]{vec_name}[/]' added successfully.")
-
-
-# ── Helpers ─────────────────────────────────────────────────────────────────
-
-
-def _write_default_search_vectors(project_root: Path) -> None:
-    """Replace ``search_vectors`` in ``config/settings.yaml`` with defaults.
-
-    Writes three starter search vectors (Software Engineer, Data Scientist,
-    Product Manager) to help the user get started immediately.  Existing
-    top-level keys (rate limits, ATS profiles, etc.) are preserved.
-    """
-    yaml_path = project_root / "config" / "settings.yaml"
-
-    default_vectors = [
-        {
-            "roles": ["software engineer"],
-            "keywords": [
-                "python",
-                "typescript",
-                "go",
-                "rust",
-                "aws",
-                "kubernetes",
-            ],
-            "locations": ["remote"],
-            "seniority": ["senior", "staff"],
-            "sources": ["linkedin", "indeed", "greenhouse", "workday", "lever"],
-            "max_applications_per_day": 50,
-        },
-        {
-            "roles": ["data scientist", "ml engineer"],
-            "keywords": [
-                "python",
-                "pytorch",
-                "tensorflow",
-                "sql",
-                "machine learning",
-            ],
-            "locations": ["remote"],
-            "seniority": ["senior", "staff"],
-            "sources": ["linkedin", "indeed", "greenhouse"],
-            "max_applications_per_day": 25,
-        },
-        {
-            "roles": ["product manager"],
-            "keywords": [
-                "product strategy",
-                "agile",
-                "analytics",
-            ],
-            "locations": ["remote"],
-            "seniority": ["senior", "staff"],
-            "sources": ["linkedin", "greenhouse"],
-            "max_applications_per_day": 25,
-        },
-    ]
-
-    if yaml_path.exists():
-        with yaml_path.open("r") as f:
-            data = yaml.safe_load(f) or {}
-    else:
-        data = {}
-
-    data["search_vectors"] = default_vectors
-
-    with yaml_path.open("w") as f:
-        yaml.safe_dump(
-            data,
-            f,
-            default_flow_style=False,
-            sort_keys=False,
-            allow_unicode=True,
-        )
-
-
-def _run_async(coro: Coroutine[Any, Any, Any]) -> None:
-    """Run an async coroutine in a new event loop.
-
-    Catches :exc:`KeyboardInterrupt` for clean shutdown on Ctrl+C.
-    """
-    try:
-        asyncio.run(coro)
-    except KeyboardInterrupt:
-        console.print("\n[yellow]Interrupted by user.[/]")
-        sys.exit(0)
-    except typer.Exit:
-        raise
-    except Exception as exc:
-        err_console.print(f"\n[red]✗[/] {exc}")
-        sys.exit(1)
-
-
-def _check_settings() -> None:
-    """Warn the user if critical settings are misconfigured.
-
-    Checks for:
-    - Mock LLM provider (no real AI calls).
-    - Missing encryption key (PII stored in plaintext).
-    """
-    settings = get_settings()
-
-    if settings.llm.provider == "mock":
-        console.print("[yellow]⚠ Using mock LLM client -- no real AI calls will be made.[/]")
-
-    if not settings.security.encryption_key:
-        console.print(
-            "[yellow]⚠ Encryption key not set -- "
-            "PII will NOT be encrypted at rest.[/]\n"
-            "  Set GETAJOB_SECURITY__ENCRYPTION_KEY in your .env file."
-        )
-
-
-def _print_result_table(result: dict[str, Any], title: str = "Results") -> None:
-    """Print a pipeline result dict as a Rich table.
-
-    Args:
-        result: Dict with string keys and int/float values.
-        title: Title displayed above the table.
-    """
-    table = Table(title=title, border_style="blue")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Count", justify="right", style="bold")
-
-    for key, value in result.items():
-        if isinstance(value, (int, float)):
-            style = "green" if value > 0 else "dim"
-            label = key.replace("_", " ").title()
-            table.add_row(label, str(value), style=style)
-
-    console.print(table)
-
-
-# ── Entry point ─────────────────────────────────────────────────────────────
-
-app.add_typer(profile_app)
-app.add_typer(vector_app)
-
-if __name__ == "__main__":
-    app()
