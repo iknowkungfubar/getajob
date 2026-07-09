@@ -618,6 +618,37 @@ async def _fetch_applications(
         }
 
 
+def _mock_application_detail(application_id: str) -> dict[str, Any]:
+    """Return a mock application detail for demo mode (no database)."""
+    import datetime
+    now = datetime.datetime.now(datetime.UTC)
+    return {
+        "id": application_id,
+        "job_listing_id": "mock-listing-001",
+        "profile_id": "mock-profile-001",
+        "state": "submitted",
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "resume_text": "Mock resume text for demo mode.",
+        "cover_letter": "Mock cover letter for demo mode.",
+        "recruiter_name": None,
+        "recruiter_email": None,
+        "applied_at": now.isoformat(),
+        "notes": None,
+        "job_listing": {
+            "id": "mock-listing-001",
+            "company": "Demo Corp",
+            "title": "Software Engineer (Demo)",
+            "location": "Remote",
+            "url": "https://example.com/jobs/001",
+            "source": "demo",
+            "source_id": "src-001",
+            "required_skills": ["Python", "FastAPI"],
+            "description": "A mock job listing for demo purposes.",
+        },
+    }
+
+
 async def _fetch_application_detail(
     db: AsyncSession | None,
     app_uuid: uuid.UUID,
