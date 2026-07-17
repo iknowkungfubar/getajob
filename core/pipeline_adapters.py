@@ -4,48 +4,54 @@ These adapters let the existing agents work with JobPipeline without
 modifying the original classes. Each adapter implements one stage protocol
 by delegating to the existing agent.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
-from core.models import Application, JobListing
-from core.pipeline import AnalysisStage, DiscoveryStage, JobPipeline, SubmissionStage, TailoringStage
+from core.models import JobListing
+from core.pipeline import (
+    AnalysisStage,
+    DiscoveryStage,
+    JobPipeline,
+    TailoringStage,
+)
 
 logger = logging.getLogger("getajob.pipeline.adapters")
 
 
-class IngestionDiscoveryAdapter:
+class IngestionDiscoveryAdapter(DiscoveryStage):
     """DiscoveryStage wrapping IngestionAgent's discover methods."""
 
-    def __init__(self, ingestion_agent):
+    def __init__(self, ingestion_agent: Any) -> None:
         self._agent = ingestion_agent
 
     async def discover(self) -> list[JobListing]:
         """Delegate to ingestion agent's discover_from_source."""
-        return await self._agent.discover_from_source(resolve=True)
+        return cast("list[JobListing]", await self._agent.discover_from_source(resolve=True))
 
 
-class ContextAnalysisAdapter:
+class ContextAnalysisAdapter(AnalysisStage):
     """AnalysisStage wrapping ContextAgent's analysis methods."""
 
-    def __init__(self, context_agent):
+    def __init__(self, context_agent: Any) -> None:
         self._agent = context_agent
 
     async def analyze(self, listings: list[JobListing]) -> list[JobListing]:
         """Analyze and filter listings using context agent."""
-        return await self._agent.analyze_listings(listings)
+        return cast("list[JobListing]", await self._agent.analyze_listings(listings))
 
 
-class TailoringStageAdapter:
+class TailoringStageAdapter(TailoringStage):
     """TailoringStage wrapping TailoringAgent."""
 
-    def __init__(self, tailoring_agent):
+    def __init__(self, tailoring_agent: Any) -> None:
         self._agent = tailoring_agent
 
-    async def tailor(self, applications: list[Application]) -> list[Application]:
+    async def tailor(self, listings: list[JobListing]) -> list[JobListing]:
         """Tailor resumes for applications."""
-        return await self._agent.tailor_applications(applications)
+        return cast("list[JobListing]", await self._agent.tailor_applications(listings))
 
 
 def build_pipeline(
@@ -66,11 +72,11 @@ def build_pipeline(
         logger.warning("Pipeline built without discovery or analysis stages")
 
     # Use dummy no-op stages if not available
-    class _NoopDiscovery:
+    class _NoopDiscovery(DiscoveryStage):
         async def discover(self) -> list[JobListing]:
             return []
 
-    class _NoopAnalysis:
+    class _NoopAnalysis(AnalysisStage):
         async def analyze(self, listings: list[JobListing]) -> list[JobListing]:
             return []
 

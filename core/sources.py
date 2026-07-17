@@ -3,6 +3,7 @@
 Extracted from IngestionAgent to create independently testable
 discovery modules per source type.
 """
+
 from __future__ import annotations
 
 import logging
@@ -95,7 +96,8 @@ class LeverSource:
                         description_json={"text": p.get("descriptionText", "")},
                         source_id=p.get("id"),
                     )
-                    for p in postings if isinstance(p, dict)
+                    for p in postings
+                    if isinstance(p, dict)
                 ]
             except Exception as e:
                 logger.error("Lever fetch failed for %s: %s", company, e)
@@ -109,7 +111,6 @@ class GenericBoardSource:
 
     async def discover(self, config: dict[str, Any]) -> list[JobListingCreate]:
         """Generic source discovery — override for custom boards."""
-        from core.schemas import SearchVectorConfig
 
         logger.info("Generic source running with config: %s", config.get("name", "unnamed"))
         return []

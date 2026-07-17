@@ -4,12 +4,13 @@ Extracted from OrchestratorAgent to create testable seams between pipeline stage
 Each stage implements a Stage protocol — inject different implementations for
 testing or to add new capabilities.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from core.models import Application, JobListing
+from core.models import JobListing
 
 logger = logging.getLogger("getajob.pipeline")
 
@@ -36,8 +37,8 @@ class AnalysisStage(Protocol):
 class TailoringStage(Protocol):
     """Tailors resumes and cover letters for application-ready jobs."""
 
-    async def tailor(self, applications: list[Application]) -> list[Application]:
-        """Generate tailored materials for each application."""
+    async def tailor(self, listings: list[JobListing]) -> list[JobListing]:
+        """Generate tailored materials for each listing."""
         ...
 
 
@@ -45,7 +46,7 @@ class TailoringStage(Protocol):
 class SubmissionStage(Protocol):
     """Subjects applications through browser automation or manual export."""
 
-    async def submit(self, applications: list[Application]) -> list[Application]:
+    async def submit(self, listings: list[JobListing]) -> list[JobListing]:
         """Submit applications and return updated records."""
         ...
 

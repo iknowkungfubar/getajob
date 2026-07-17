@@ -124,11 +124,7 @@ async def review_page(
     app_data = await _fetch_application_detail(db, app_uuid)
 
     if app_data is None:
-        # If no DB and mock doesn't match, return a generic mock detail.
-        if db is None:
-            app_data = _mock_application_detail(application_id)
-        else:
-            raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Application not found")
 
     return cast(
         HTMLResponse,
@@ -165,7 +161,7 @@ async def get_stats(
         return await _fetch_stats(db)
     except Exception as exc:
         logger.error("Failed to fetch stats", error=str(exc))
-        raise HTTPException(status_code=503, detail=f"Database query failed: {exc}")
+        raise HTTPException(status_code=503, detail=f"Database query failed: {exc}") from exc
 
 
 # ── API: Applications ───────────────────────────────────────────────────────
@@ -190,7 +186,9 @@ async def list_applications(
         Dict with ``items``, ``total``, ``page``, ``page_size``, ``total_pages``.
     """
     if db is None:
-                    raise HTTPException(status_code=503, detail="Database unavailable")  # was: return _mock_applications(state, limit, offset)
+        raise HTTPException(
+            status_code=503, detail="Database unavailable"
+        )  # was: return _mock_applications(state, limit, offset)
 
     try:
         return await _fetch_applications(db, state, limit, offset)
@@ -213,7 +211,9 @@ async def get_application(
     info.
     """
     if db is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")  # was: return _mock_application_detail(application_id)
+        raise HTTPException(
+            status_code=503, detail="Database unavailable"
+        )  # was: return _mock_application_detail(application_id)
 
     try:
         app_uuid = uuid.UUID(application_id)
@@ -506,9 +506,9 @@ async def get_config(_request: Request) -> dict[str, Any]:
 # ── Data-fetching helpers ───────────────────────────────────────────────────
 
 
-async def _fetch_stats(db: AsyncSession) -> dict[str, Any]:
+async def _fetch_stats(db: AsyncSession | None) -> dict[str, Any]:
     """Return aggregate statistics for the dashboard from the database.
-    
+
     Raises HTTPException(503) if the database is unavailable.
     """
     if db is None:
@@ -706,7 +706,6 @@ def _application_to_dict(app: Application, *, include_details: bool = False) -> 
 
     return app_dict
 
+
 # ── Helper ────────────────────────────────────────────────────────────────────
 # (mock fallbacks removed — see C2 of architecture audit)
-
-
