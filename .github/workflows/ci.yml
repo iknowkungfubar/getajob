@@ -234,7 +234,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Scan for secrets
-        uses: trufflesecurity/trufflehog@v3.95.8
+        uses: trufflesecurity/trufflehog@v3.95.9
         with:
           extra_args: --only-verified
         continue-on-error: true
