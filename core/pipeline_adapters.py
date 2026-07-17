@@ -4,7 +4,6 @@ These adapters let the existing agents work with JobPipeline without
 modifying the original classes. Each adapter implements one stage protocol
 by delegating to the existing agent.
 """
-
 from __future__ import annotations
 
 import logging
@@ -12,16 +11,13 @@ from typing import Any, cast
 
 from core.models import JobListing
 from core.pipeline import (
-    AnalysisStage,
-    DiscoveryStage,
     JobPipeline,
-    TailoringStage,
 )
 
 logger = logging.getLogger("getajob.pipeline.adapters")
 
 
-class IngestionDiscoveryAdapter(DiscoveryStage):
+class IngestionDiscoveryAdapter:
     """DiscoveryStage wrapping IngestionAgent's discover methods."""
 
     def __init__(self, ingestion_agent: Any) -> None:
@@ -32,7 +28,7 @@ class IngestionDiscoveryAdapter(DiscoveryStage):
         return cast("list[JobListing]", await self._agent.discover_from_source(resolve=True))
 
 
-class ContextAnalysisAdapter(AnalysisStage):
+class ContextAnalysisAdapter:
     """AnalysisStage wrapping ContextAgent's analysis methods."""
 
     def __init__(self, context_agent: Any) -> None:
@@ -43,7 +39,7 @@ class ContextAnalysisAdapter(AnalysisStage):
         return cast("list[JobListing]", await self._agent.analyze_listings(listings))
 
 
-class TailoringStageAdapter(TailoringStage):
+class TailoringStageAdapter:
     """TailoringStage wrapping TailoringAgent."""
 
     def __init__(self, tailoring_agent: Any) -> None:
@@ -72,12 +68,12 @@ def build_pipeline(
         logger.warning("Pipeline built without discovery or analysis stages")
 
     # Use dummy no-op stages if not available
-    class _NoopDiscovery(DiscoveryStage):
+    class _NoopDiscovery:
         async def discover(self) -> list[JobListing]:
             return []
 
-    class _NoopAnalysis(AnalysisStage):
-        async def analyze(self, listings: list[JobListing]) -> list[JobListing]:
+    class _NoopAnalysis:
+        async def analyze(self, _listings: list[JobListing]) -> list[JobListing]:
             return []
 
     pipeline = JobPipeline(
