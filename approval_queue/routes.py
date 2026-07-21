@@ -621,6 +621,7 @@ async def _fetch_applications(
 def _mock_application_detail(application_id: str) -> dict[str, Any]:
     """Return a mock application detail for demo mode (no database)."""
     import datetime
+
     now = datetime.datetime.now(datetime.UTC)
     return {
         "id": application_id,

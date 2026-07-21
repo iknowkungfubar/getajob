@@ -4,6 +4,7 @@ These adapters let the existing agents work with JobPipeline without
 modifying the original classes. Each adapter implements one stage protocol
 by delegating to the existing agent.
 """
+
 from __future__ import annotations
 
 import logging

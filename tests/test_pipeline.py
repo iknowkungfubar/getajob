@@ -3,6 +3,7 @@
 Pipeline stages are pure async protocols with no database or network
 dependencies, making them straightforward to test with stub implementations.
 """
+
 from __future__ import annotations as _annotations
 
 from typing import Any
