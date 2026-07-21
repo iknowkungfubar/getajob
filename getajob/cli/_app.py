@@ -4,6 +4,7 @@ This module exists solely to break circular imports between ``__init__.py``
 and the sub-modules (``commands.py``, ``profile.py``, ``vector.py``).
 Only module-level singleton instances live here -- no logic.
 """
+
 from __future__ import annotations as _annotations
 
 import typer

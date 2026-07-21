@@ -2,6 +2,7 @@
 
 Registered on the ``profile_app`` Typer instance defined in :mod:`._app`.
 """
+
 from __future__ import annotations as _annotations
 
 from typing import Any

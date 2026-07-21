@@ -17,6 +17,7 @@ Usage
     # First-time setup (create tables, etc.)
     getajob setup
 """
+
 from __future__ import annotations as _annotations
 
 # Import sub-modules so their decorator-registered commands are picked up.

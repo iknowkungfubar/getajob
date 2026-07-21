@@ -3,6 +3,7 @@
 Each function is a typer command registered on the shared ``app`` instance.
 Extracted from the monolithic cli.py for maintainability.
 """
+
 from __future__ import annotations as _annotations
 
 import asyncio

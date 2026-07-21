@@ -3,6 +3,7 @@
 Extracted from the monolithic cli.py into a dedicated module
 for maintainability and testability.
 """
+
 from __future__ import annotations as _annotations
 
 import asyncio
