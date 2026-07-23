@@ -136,8 +136,9 @@ GETAJOB_BROWSER__NAVIGATION_TIMEOUT_SECONDS=30
 # -- Job Discovery -------------------------------------------------------------
 GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY=50
 """
-    # codeql[py/clear-text-storage-sensitive-data]: FP
-    env_path.write_text(env_content)
+    env_path.write_text(  # codeql[py/clear-text-storage-sensitive-data]: FP
+        env_content
+    )
     env_path.chmod(0o600)
     console.print(f"  [green]\u2713[/] Configuration written: {env_path}")
 
