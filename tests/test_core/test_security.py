@@ -7,14 +7,12 @@ tokenization, and the test-key heuristics used to flag development keys.
 from __future__ import annotations as _annotations
 
 import base64
-import hashlib
 import hmac
 
 import pytest
 
 from core.exceptions import SecurityError
 from core.security import (
-    _AES_KEY_LENGTH,
     _NONCE_LENGTH,
     _TAG_LENGTH,
     _TOKEN_HASH_ALGORITHM,
