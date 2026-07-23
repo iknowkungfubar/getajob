@@ -9,12 +9,12 @@ from __future__ import annotations as _annotations
 
 import typer
 
-from getajob.cli.helpers import _version_callback, console
+from getajob.cli.helpers import _version_callback
 
 __all__: list[str] = [
     "app",
-    "vector_app",
     "profile_app",
+    "vector_app",
 ]
 
 # ── Sub-apps -----------------------------------------------------------------
@@ -56,10 +56,9 @@ def _main(
 
 # ── Import command modules (side effects: @app.command() decorators) ---------
 
-import getajob.cli.commands  # noqa: E402, F401  -- registers main commands
-import getajob.cli.profile  # noqa: E402, F401   -- registers profile commands
+import getajob.cli.commands  # noqa: E402  -- registers main commands
+import getajob.cli.profile  # noqa: E402   -- registers profile commands
 import getajob.cli.vector  # noqa: E402, F401    -- registers vector commands
-
 
 # ── Register sub-apps --------------------------------------------------------
 

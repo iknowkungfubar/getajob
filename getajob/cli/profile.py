@@ -12,9 +12,10 @@ import typer
 from rich.panel import Panel
 from rich.table import Table
 
+from getajob.cli.helpers import _run_async, console, err_console
+
 # profile_app is defined in main.py; imported here so decorators work.
 from getajob.cli.main import profile_app
-from getajob.cli.helpers import _run_async, console, err_console
 
 __all__: list[str] = [
     "show",
@@ -97,7 +98,9 @@ def update() -> None:
                 return
 
             current = profiles[0]
-            console.print(Panel.fit("[bold cyan]\u270f\ufe0f  Update Profile[/]", border_style="cyan"))
+            console.print(
+                Panel.fit("[bold cyan]\u270f\ufe0f  Update Profile[/]", border_style="cyan")
+            )
             console.print("[dim]Press Enter to keep the current value.[/]\n")
 
             # Interactive prompts with current values as defaults.

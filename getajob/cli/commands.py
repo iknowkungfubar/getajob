@@ -18,17 +18,23 @@ from rich.progress import (
     TextColumn,
 )
 
+from getajob.cli.helpers import (
+    _check_settings,
+    _print_result_table,
+    _run_async,
+    console,
+    err_console,
+)
 from getajob.cli.main import app
-from getajob.cli.helpers import _check_settings, _print_result_table, _run_async, console, err_console
 
 __all__: list[str] = [
-    "init",
     "discover",
-    "tailor",
+    "doctor",
+    "init",
     "run",
     "serve",
-    "doctor",
     "setup",
+    "tailor",
 ]
 
 
@@ -151,10 +157,9 @@ GETAJOB_JOB_DISCOVERY__MAX_APPLICATIONS_PER_DAY=50
         # Step 5: Create user profile in the database.
         if has_profile:
             try:
+                from core.database import create_engine
                 from core.schemas import ProfileCreate
                 from profile_engine.profile_store import ProfileStore
-
-                from core.database import create_engine
 
                 engine = create_engine()
                 store = ProfileStore(engine)
@@ -253,11 +258,10 @@ def discover(
     _check_settings()
 
     async def _run() -> None:
+        from agents.orchestrator_agent import OrchestratorAgent
         from core.database import create_engine
         from core.event_bus import InMemoryEventBus
         from core.llm_client import get_llm_client
-
-        from agents.orchestrator_agent import OrchestratorAgent
 
         engine = create_engine()
         event_bus = InMemoryEventBus()
@@ -321,13 +325,12 @@ def tailor(
     async def _run() -> None:
         from sqlalchemy import select
 
+        from agents.context_agent import ContextAgent
+        from agents.tailoring_agent import TailoringAgent
         from core.database import create_engine, get_session
         from core.event_bus import InMemoryEventBus
         from core.llm_client import get_llm_client
         from core.models import JobListing
-
-        from agents.context_agent import ContextAgent
-        from agents.tailoring_agent import TailoringAgent
 
         engine = create_engine()
         event_bus = InMemoryEventBus()
@@ -446,11 +449,10 @@ def run(
     _check_settings()
 
     async def _run() -> None:
+        from agents.orchestrator_agent import OrchestratorAgent
         from core.database import create_engine
         from core.event_bus import InMemoryEventBus
         from core.llm_client import get_llm_client
-
-        from agents.orchestrator_agent import OrchestratorAgent
 
         engine = create_engine()
         event_bus = InMemoryEventBus()
@@ -465,7 +467,9 @@ def run(
         await orchestrator.start()
         try:
             if continuous:
-                console.print("[blue]\u27f3[/] Continuous mode -- press Ctrl+C to stop gracefully.\n")
+                console.print(
+                    "[blue]\u27f3[/] Continuous mode -- press Ctrl+C to stop gracefully.\n"
+                )
                 import asyncio
 
                 interval_seconds = interval * 60.0
@@ -515,7 +519,9 @@ def serve(
     """
     _check_settings()
 
-    console.print(Panel.fit("[bold magenta]\U0001f310  Approval Queue Web UI[/]", border_style="magenta"))
+    console.print(
+        Panel.fit("[bold magenta]\U0001f310  Approval Queue Web UI[/]", border_style="magenta")
+    )
     console.print(f"\n  Starting server at [bold]http://{host}:{port}[/]\n")
 
     from core.config import get_settings
@@ -758,7 +764,9 @@ def setup(
     After tables are created, ensures required data directories exist and
     prints a summary of what was set up.
     """
-    console.print(Panel.fit("[bold yellow]\u2699\ufe0f  First-Time Setup[/]", border_style="yellow"))
+    console.print(
+        Panel.fit("[bold yellow]\u2699\ufe0f  First-Time Setup[/]", border_style="yellow")
+    )
 
     async def _run() -> None:
         from core.config import get_settings

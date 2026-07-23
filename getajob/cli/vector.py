@@ -14,12 +14,12 @@ import yaml
 from rich.panel import Panel
 from rich.table import Table
 
-from getajob.cli.main import vector_app
 from getajob.cli.helpers import console
+from getajob.cli.main import vector_app
 
 __all__: list[str] = [
-    "vector_list",
     "vector_add",
+    "vector_list",
 ]
 
 

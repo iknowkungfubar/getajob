@@ -8,19 +8,16 @@ configuration generation.
 from __future__ import annotations as _annotations
 
 import asyncio
-import os
 import sys
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
 
 import structlog
+import typer
 import yaml
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
-
-import typer
 
 from core.config import get_settings
 
@@ -30,11 +27,11 @@ console = Console()
 err_console = Console(stderr=True)
 
 __all__: list[str] = [
-    "_run_async",
     "_check_settings",
     "_print_result_table",
-    "_write_default_search_vectors",
+    "_run_async",
     "_version_callback",
+    "_write_default_search_vectors",
     "console",
     "err_console",
 ]
