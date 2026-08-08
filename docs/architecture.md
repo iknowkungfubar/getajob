@@ -9,7 +9,7 @@ last_reviewed: 2026-06-24
 
 > **Version:** 0.1.0 (Pre-Alpha)
 > **Last Updated:** 2026-06-24
-> **Audit Status:** ~45% feature completion — see [audit-findings.md](../audit-findings.md)
+> **Audit Status:** ~45% feature completion
 
 ---
 
@@ -219,7 +219,7 @@ The application lifecycle is governed by a **7-state state machine** with 18 all
 
 ### Implementation Status
 
-> **⚠️ Note:** The state machine definition is fully implemented in `core/state_machine.py`, but only 2 of 7 states are reachable through the automated pipeline as of 2026-06-24. See the [audit findings](../audit-findings.md#appendix-state-machine-implementation-status) for details.
+> **⚠️ Note:** The state machine definition is fully implemented in `core/state_machine.py`, but only 2 of 7 states are reachable through the automated pipeline as of 2026-06-24.
 
 | Transition | Status | Notes |
 |-----------|--------|-------|
@@ -675,7 +675,7 @@ See [docs/deployment.md](deployment.md) for full deployment details.
 
 ## Known Architectural Debt
 
-The following items represent the highest-priority architectural gaps identified in the [2026-06-24 audit](../audit-findings.md):
+The following items represent the highest-priority architectural gaps identified in the 2026-06-24 audit:
 
 | Priority | Issue | Impact |
 |----------|-------|--------|
