@@ -339,7 +339,7 @@ The `.pre-commit-config.yaml` includes `detect-secrets` to catch accidental secr
 
 ## Known Security Gaps
 
-These items were identified in the [2026-06-24 audit](../audit-findings.md#4-security-audit) and require attention:
+These items were identified in the 2026-06-24 audit and require attention:
 
 | # | Severity | File | Issue | Fix |
 |--|----------|------|-------|-----|

@@ -21,7 +21,7 @@
 
 > **⚠️ Pre-Alpha — Active Development**
 >
-> This platform is under active construction. The codebase framework is structurally complete but the integration pipeline (Phase 9) has not been implemented. See [`docs/architecture.md`](docs/architecture.md#integration-status) for the current state of each module and the [audit findings](audit-findings.md) for the full gap analysis.
+> This platform is under active construction. The codebase framework is structurally complete but the integration pipeline (Phase 9) has not been implemented. See [`docs/architecture.md`](docs/architecture.md#integration-status) for the current state of each module.
 >
 > **Estimated completion:** ~45% of the feature set. Suitable for development experimentation and contributor onboarding, not production use.
 
@@ -73,7 +73,6 @@ Key design documents:
 - [System Architecture](docs/architecture.md) — Full module descriptions, data flow diagrams, state machine, agent roles
 - [Security Architecture](docs/security.md) — Encryption, PII tokenization, secrets management, threat model
 - [Deployment Guide](docs/deployment.md) — Local dev, production requirements, Docker, monitoring
-- [Audit Findings](audit-findings.md) — Comprehensive 2026-06-24 codebase audit with prioritized fix list
 
 ---
 
